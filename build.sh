@@ -3,6 +3,18 @@ set -e  # Exit immediately if a command exits with a non-zero status
 
 echo "Starting build process for Face Viewer Dashboard..."
 
+# Check for and clean requirements-render.txt if it exists
+echo "Checking for requirements-render.txt..."
+if [ -f "requirements-render.txt" ]; then
+    echo "Found requirements-render.txt, removing pandas references..."
+    grep -v -i "pandas" requirements-render.txt > requirements-render-clean.txt
+    mv requirements-render-clean.txt requirements-render.txt
+    echo "Cleaned requirements-render.txt:"
+    cat requirements-render.txt
+else
+    echo "requirements-render.txt not found, continuing..."
+fi
+
 # Update pip first
 echo "Updating pip..."
 pip install --upgrade pip
