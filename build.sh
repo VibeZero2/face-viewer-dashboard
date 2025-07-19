@@ -9,7 +9,6 @@ pip install --upgrade pip
 
 # Install core dependencies explicitly
 echo "Installing core dependencies explicitly..."
-pip install pandas==2.0.3
 pip install Flask==2.3.3
 pip install gunicorn==21.2.0
 
@@ -17,7 +16,8 @@ pip install gunicorn==21.2.0
 echo "Installing remaining dependencies..."
 pip install -r requirements.txt
 
-echo "Verifying pandas installation..."
-pip show pandas
+echo "Verifying core installations..."
+pip show Flask
+pip show gunicorn
 
 echo "Build completed successfully!"
