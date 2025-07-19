@@ -14,7 +14,11 @@ pip install gunicorn==21.2.0
 
 # Install all other dependencies
 echo "Installing remaining dependencies..."
-pip install -r requirements.txt
+echo "Verifying requirements.txt does not contain pandas..."
+grep -v "pandas" requirements.txt > requirements_clean.txt
+echo "Using clean requirements file..."
+cat requirements_clean.txt
+pip install -r requirements_clean.txt
 
 echo "Verifying core installations..."
 pip show Flask
