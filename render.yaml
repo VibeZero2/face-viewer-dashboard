@@ -3,8 +3,8 @@ services:
     name: face-viewer-dashboard
     env: python
     runtime: python3.10
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn wsgi:application
+    buildCommand: chmod +x build.sh && ./build.sh
+    startCommand: chmod +x start.sh && ./start.sh
     envVars:
       - key: FLASK_SECRET_KEY
         generateValue: true
