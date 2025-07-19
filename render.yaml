@@ -3,8 +3,8 @@ services:
     name: face-viewer-dashboard
     env: python
     runtime: python3.10
-    buildCommand: chmod +x build.sh && ./build.sh
-    startCommand: chmod +x start.sh && ./start.sh
+    buildCommand: pip install poetry && poetry install
+    startCommand: poetry run gunicorn wsgi:application
     envVars:
       - key: FLASK_SECRET_KEY
         generateValue: true
