@@ -8,8 +8,8 @@ import sys
 # Add the current directory to the path so that the app module can be found
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Import the Flask app
-from app import app
+# Import the simplified Flask app to avoid pandas dependency
+from simple import app
 
 # This is needed for Gunicorn to find the app
 application = app
