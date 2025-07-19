@@ -31,7 +31,7 @@ login_manager.login_view = 'login'
 
 # Path constants
 BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = Path(os.getenv('FACE_VIEWER_DATA_DIR', BASE_DIR.parent / 'face_half_viewer_web' / 'data'))
+DATA_DIR = Path(os.getenv('FACE_VIEWER_DATA_DIR', BASE_DIR / 'data'))
 UPLOAD_DIR = BASE_DIR / 'uploads'
 UPLOAD_DIR.mkdir(exist_ok=True)
 
