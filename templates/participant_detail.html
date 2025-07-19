@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Participant {{ pid }} - Face Viewer Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Participant: {{ pid }}</h1>
+        <div>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+            <a href="{{ url_for('download_participant', pid=pid) }}" class="btn btn-primary">Download Data</a>
+        </div>
+    </div>
+    
+    <!-- Participant Info -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Participant Information</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <tbody>
+                            <tr>
+                                <th>Participant ID</th>
+                                <td>{{ pid }}</td>
+                            </tr>
+                            {% if duration %}
+                            <tr>
+                                <th>Session Duration</th>
+                                <td>{{ duration }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <th>Total Responses</th>
+                                <td>{{ data|length }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Face Order -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Face Presentation Order</h5>
+                </div>
+                <div class="card-body">
+                    {% if face_order %}
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Position</th>
+                                    <th>Face ID</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in face_order %}
+                                <tr>
+                                    <td>{{ row.position }}</td>
+                                    <td>{{ row.face_id }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No face order data available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Visualizations -->
+    <div class="row mb-4">
+        <!-- Trust Rating Histogram -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Trust Rating Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <div id="trust-hist" style="height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Trust by Face ID -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Trust Rating by Face ID</h5>
+                </div>
+                <div class="card-body">
+                    <div id="trust-by-face" style="height: 400px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Raw Data -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Raw Data</h5>
+            <button class="btn btn-sm btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#rawDataCollapse">
+                Toggle Data
+            </button>
+        </div>
+        <div class="collapse" id="rawDataCollapse">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Face ID</th>
+                                <th>Version</th>
+                                <th>Order</th>
+                                <th>Trust Rating</th>
+                                <th>Masc Choice</th>
+                                <th>Fem Choice</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in data %}
+                            <tr>
+                                <td>{{ row.timestamp }}</td>
+                                <td>{{ row.face_id }}</td>
+                                <td>{{ row.version }}</td>
+                                <td>{{ row.order_presented }}</td>
+                                <td>{{ row.trust_rating }}</td>
+                                <td>{{ row.masc_choice }}</td>
+                                <td>{{ row.fem_choice }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const trustHistData = {{ trust_hist|safe }};
+        Plotly.newPlot('trust-hist', trustHistData.data, trustHistData.layout);
+        
+        const trustByFaceData = {{ trust_by_face|safe }};
+        Plotly.newPlot('trust-by-face', trustByFaceData.data, trustByFaceData.layout);
+    });
+</script>
+{% endblock %}

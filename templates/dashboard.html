@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Face Viewer Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4 mb-4">Face Viewer Study Dashboard</h1>
+    
+    <div class="row">
+        <!-- Summary Statistics -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Summary Statistics</h5>
+                </div>
+                <div class="card-body">
+                    {% if summary_stats %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <h6>Participants</h6>
+                                <p class="h3">{{ summary_stats.total_participants }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <h6>Total Responses</h6>
+                                <p class="h3">{{ summary_stats.total_responses }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <h6>Average Trust Rating</h6>
+                                <p class="h3">{{ "%.2f"|format(summary_stats.avg_trust_rating) }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <h6>Trust Rating Std Dev</h6>
+                                <p class="h3">{{ "%.2f"|format(summary_stats.std_trust_rating) }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h6>Trust by Face Version</h6>
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Version</th>
+                                        <th>Average Trust Rating</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for version, rating in summary_stats.trust_by_version.items() %}
+                                    <tr>
+                                        <td>{{ version }}</td>
+                                        <td>{{ "%.2f"|format(rating) }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No data available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Trust Rating Histogram -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Trust Rating Distribution</h5>
+                </div>
+                <div class="card-body">
+                    {% if trust_histogram %}
+                    <div id="trust-histogram" style="height: 400px;"></div>
+                    {% else %}
+                    <p class="text-muted">No data available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Trust Rating Boxplot -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">Trust Rating by Face Version</h5>
+                </div>
+                <div class="card-body">
+                    {% if trust_boxplot %}
+                    <div id="trust-boxplot" style="height: 400px;"></div>
+                    {% else %}
+                    <p class="text-muted">No data available</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Participant List -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Participants</h5>
+                    <a href="{{ url_for('download_all') }}" class="btn btn-sm btn-primary">Download All</a>
+                </div>
+                <div class="card-body">
+                    {% if participants %}
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Participant ID</th>
+                                    <th>Files</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for pid, files in participants.items() %}
+                                <tr>
+                                    <td>{{ pid }}</td>
+                                    <td>
+                                        {% if files.csv %}CSV{% endif %}
+                                        {% if files.xlsx %}XLSX{% endif %}
+                                        {% if files.enc %}ENC{% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('participant_detail', pid=pid) }}" class="btn btn-sm btn-info">View</a>
+                                        <a href="{{ url_for('download_participant', pid=pid) }}" class="btn btn-sm btn-secondary">Download</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No participants found</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if trust_histogram %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const histogramData = {{ trust_histogram|safe }};
+        Plotly.newPlot('trust-histogram', histogramData.data, histogramData.layout);
+    });
+</script>
+{% endif %}
+
+{% if trust_boxplot %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const boxplotData = {{ trust_boxplot|safe }};
+        Plotly.newPlot('trust-boxplot', boxplotData.data, boxplotData.layout);
+    });
+</script>
+{% endif %}
+{% endblock %}
