@@ -133,7 +133,7 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="#" onclick="confirmAction('Are you sure you want to check for abandoned sessions?', function() { window.location.href = '{{ url_for(\'check_abandoned_sessions\') }}'; }); return false;">
+                            <a class="nav-link" href="{{ url_for('check_abandoned_sessions') }}" onclick="return confirmAction('Are you sure you want to check for abandoned sessions?');">
                                 <i class="fas fa-clock me-2"></i> Check Abandoned Sessions
                             </a>
                         </li>

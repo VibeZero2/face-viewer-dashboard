@@ -115,8 +115,14 @@ function downloadCSV(csvContent, fileName) {
 
 // Function to show confirmation dialog
 function confirmAction(message, callback) {
-    if (confirm(message)) {
-        callback();
+    // If callback is provided, use it, otherwise just return the confirmation result
+    if (callback) {
+        if (confirm(message)) {
+            callback();
+        }
+        return false;
+    } else {
+        return confirm(message);
     }
 }
 
