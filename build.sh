@@ -1,16 +1,33 @@
 #!/bin/bash
+# Force clean build: $(date +%s) - July 20, 2025
+set -x  # Print each command before executing (for debugging)
 set -e  # Exit immediately if a command exits with a non-zero status
+
+echo "===== EXTENSIVE DEBUG INFO ====="
+echo "Current directory: $(pwd)"
+echo "Directory listing:"
+ls -la
+echo "Environment variables:"
+env | sort
+echo "Python version: $(python --version 2>&1)"
+echo "Pip version: $(pip --version 2>&1)"
+echo "===== END DEBUG INFO ====="
 
 echo "Starting build process for Face Viewer Dashboard..."
 
 # Aggressively search for and clean any requirements-render.txt files
 echo "Aggressively searching for requirements-render.txt..."
-find / -name "requirements-render.txt" -type f 2>/dev/null | while read file; do
-    echo "Found requirements-render.txt at $file, removing pandas references..."
-    grep -v -i "pandas" "$file" > "${file}.clean"
-    mv "${file}.clean" "$file"
-    echo "Cleaned $file:"
+find / -name "requirements*.txt" -type f 2>/dev/null | while read file; do
+    echo "Found requirements file at $file"
+    echo "Contents of $file:"
     cat "$file"
+    if [[ "$file" == *"requirements-render.txt"* ]]; then
+        echo "Found requirements-render.txt at $file, removing pandas references..."
+        grep -v -i "pandas" "$file" > "${file}.clean"
+        mv "${file}.clean" "$file"
+        echo "Cleaned $file:"
+        cat "$file"
+    fi
 done
 
 # Create our own clean requirements-render.txt to override any that might be used
@@ -18,10 +35,21 @@ echo "Creating clean requirements-render.txt in multiple locations..."
 cat requirements.txt | grep -v -i "pandas" > requirements-render.txt
 echo "# pandas is explicitly blocked" >> requirements-render.txt
 
-# Also create it in parent directories and common locations
+# Create a clean requirements.txt backup in case it's being modified
+cp requirements.txt requirements.txt.original
+grep -v -i "pandas" requirements.txt > requirements.txt.clean
+cp requirements.txt.clean requirements.txt
+echo "Clean requirements.txt:"
+cat requirements.txt
+
+# Also create clean files in parent directories and common locations
 mkdir -p /tmp/render
 cp requirements-render.txt /tmp/render/
 cp requirements-render.txt ../requirements-render.txt 2>/dev/null || true
+
+# Check for any Render-specific directories that might contain requirements files
+echo "Checking for Render-specific directories:"
+find / -type d -name "*render*" 2>/dev/null | grep -v "Permission denied" || true
 
 # Update pip first
 echo "Updating pip..."
@@ -34,6 +62,7 @@ touch .render_clean_build_v3
 # Create a complete block for pandas
 echo "Creating complete pandas block..."
 echo "#!/bin/bash
+# Force clean build: $(date +%s) - July 20, 2025
 echo 'ERROR: pandas installation blocked by build script'
 exit 1" > /tmp/pandas-block.sh
 chmod +x /tmp/pandas-block.sh
