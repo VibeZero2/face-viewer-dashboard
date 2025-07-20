@@ -76,7 +76,7 @@
                         <a class="nav-link" href="{{ url_for('dashboard') }}"><i class="fas fa-chart-line me-1"></i> Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('r_analysis') }}"><i class="fas fa-chart-bar me-1"></i> R Analysis</a>
+                        <a class="nav-link" href="{{ url_for('analytics.run_analysis') }}"><i class="fas fa-chart-bar me-1"></i> Analytics</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('download_all') }}"><i class="fas fa-download me-1"></i> Download All Data</a>
@@ -115,7 +115,7 @@
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('r_analysis') }}">
+                            <a class="nav-link" href="{{ url_for('analytics.run_analysis') }}">
                                 <i class="fas fa-chart-bar me-2"></i> Statistical Analysis
                             </a>
                         </li>

@@ -36,12 +36,24 @@ def dashboard():
         {'id': 'trust_masc_correlation', 'name': 'Trust-Masculinity Correlation'}
     ]
     
+    # Mock columns for data analysis
+    columns = [
+        {'id': 'participant_id', 'name': 'Participant ID', 'type': 'string'},
+        {'id': 'face_id', 'name': 'Face ID', 'type': 'string'},
+        {'id': 'face_type', 'name': 'Face Type', 'type': 'categorical'},
+        {'id': 'trust_rating', 'name': 'Trust Rating', 'type': 'numeric'},
+        {'id': 'masculinity_score', 'name': 'Masculinity Score', 'type': 'numeric'},
+        {'id': 'symmetry_score', 'name': 'Symmetry Score', 'type': 'numeric'},
+        {'id': 'response_time', 'name': 'Response Time (ms)', 'type': 'numeric'}
+    ]
+    
     # Render analytics template
     return render_template(
         'analytics.html',
         title='Face Viewer Analytics',
         summary_stats=summary_stats,
-        available_analyses=available_analyses
+        available_analyses=available_analyses,
+        columns=columns
     )
 
 @analytics_bp.route('/api/run_analysis', methods=['POST'])
