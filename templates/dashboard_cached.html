@@ -132,23 +132,23 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3 mb-3">
-                            <a href="{{ url_for('participants_list') }}" class="btn btn-outline-primary btn-block">
+                            <a href="{{ url_for('participants.list') }}" class="btn btn-outline-primary btn-block">
                                 <i class="fas fa-users me-2"></i> Participants
                             </a>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <a href="{{ url_for('analytics.dashboard') if 'analytics.dashboard' in url_for_map else '#' }}" class="btn btn-outline-info btn-block">
-                                <i class="fas fa-chart-line me-2"></i> Analytics
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-info btn-block">
+                                <i class="fas fa-chart-line me-2"></i> Dashboard
                             </a>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <a href="{{ url_for('analytics.export') if 'analytics.export' in url_for_map else '#' }}" class="btn btn-outline-success btn-block">
+                            <a href="{{ url_for('export.index') }}" class="btn btn-outline-success btn-block">
                                 <i class="fas fa-file-export me-2"></i> Export Data
                             </a>
                         </div>
                         <div class="col-md-3 mb-3">
-                            <a href="{{ url_for('admin.dashboard') if 'admin.dashboard' in url_for_map else '#' }}" class="btn btn-outline-dark btn-block">
-                                <i class="fas fa-cog me-2"></i> Admin
+                            <a href="{{ url_for('backups') }}" class="btn btn-outline-dark btn-block">
+                                <i class="fas fa-cog me-2"></i> Backups
                             </a>
                         </div>
                     </div>
