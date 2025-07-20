@@ -16,6 +16,7 @@ def index():
     return render_template('index.html', title='Face Viewer Dashboard')
 
 @app.route('/health')
+@app.route('/healthz')
 def health():
     return jsonify({"status": "healthy", "message": "Face Viewer Dashboard is running without pandas"})
 
