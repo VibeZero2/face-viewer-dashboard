@@ -3,6 +3,17 @@
 set -x  # Print each command before executing (for debugging)
 set -e  # Exit immediately if a command exits with a non-zero status
 
+# CRITICAL: Immediately intercept requirements-render.txt if it exists
+echo "CRITICAL: Checking for requirements-render.txt at script start"
+if [ -f "requirements-render.txt" ]; then
+    echo "Found requirements-render.txt at start, removing pandas references"
+    cat requirements-render.txt
+    grep -v -i "pandas" requirements-render.txt > requirements-render.txt.clean
+    mv requirements-render.txt.clean requirements-render.txt
+    echo "MODIFIED requirements-render.txt:"
+    cat requirements-render.txt
+fi
+
 echo "===== EXTENSIVE DEBUG INFO ====="
 echo "Current directory: $(pwd)"
 echo "Directory listing:"
@@ -55,6 +66,13 @@ find / -type d -name "*render*" 2>/dev/null | grep -v "Permission denied" || tru
 echo "Updating pip..."
 pip install --upgrade pip
 
+# Set up pip wrapper to intercept all pip commands
+echo "Setting up pip wrapper..."
+chmod +x pip_wrapper.sh
+export PATH="$(pwd):$PATH"
+alias pip="$(pwd)/pip_wrapper.sh"
+echo "PATH=$PATH"
+
 # Create a clean environment marker to prevent cached builds
 echo "Creating clean build marker..."
 touch .render_clean_build_v3
@@ -82,6 +100,34 @@ echo "Creating fake pandas package..."
 mkdir -p /tmp/fake-pandas/pandas
 echo "setup() {\n  echo 'Fake pandas package to prevent real pandas installation'\n}" > /tmp/fake-pandas/setup.sh
 echo "def __getattr__(name):\n    raise ImportError('pandas is not available')" > /tmp/fake-pandas/pandas/__init__.py
+
+# Create a pre-installation hook to intercept pip install commands
+echo "Creating pip pre-installation hook..."
+mkdir -p ~/.pip/hooks
+cat > ~/.pip/hooks/pre-install.py << 'EOF'
+#!/usr/bin/env python
+import sys
+
+if any('pandas' in arg.lower() for arg in sys.argv):
+    print('ERROR: pandas installation blocked by pre-installation hook')
+    sys.exit(1)
+EOF
+chmod +x ~/.pip/hooks/pre-install.py
+
+# Modify any requirements-render.txt that might be created during the build process
+echo "Setting up inotify watch for requirements-render.txt..."
+(
+while true; do
+  if [ -f "requirements-render.txt" ]; then
+    echo "requirements-render.txt detected, removing pandas references"
+    grep -v -i "pandas" requirements-render.txt > requirements-render.txt.clean
+    mv requirements-render.txt.clean requirements-render.txt
+    echo "Modified requirements-render.txt:"
+    cat requirements-render.txt
+  fi
+  sleep 1
+done
+) &
 
 # Install core dependencies explicitly
 echo "Installing core dependencies explicitly..."
