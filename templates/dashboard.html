@@ -110,7 +110,7 @@
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Participants</h5>
-                    <a href="{{ url_for('download_all') }}" class="btn btn-sm btn-primary">Download All</a>
+                    <a href="{{ url_for('export.index') }}" class="btn btn-sm btn-primary">Download All</a>
                 </div>
                 <div class="card-body">
                     {% if participants %}
@@ -133,8 +133,8 @@
                                         {% if files.enc %}ENC{% endif %}
                                     </td>
                                     <td>
-                                        <a href="{{ url_for('participant_detail', pid=pid) }}" class="btn btn-sm btn-info">View</a>
-                                        <a href="{{ url_for('download_participant', pid=pid) }}" class="btn btn-sm btn-secondary">Download</a>
+                                        <a href="{{ url_for('participants.detail', pid=pid) }}" class="btn btn-sm btn-info">View</a>
+                                        <a href="{{ url_for('participants.download', pid=pid) }}" class="btn btn-sm btn-secondary">Download</a>
                                     </td>
                                 </tr>
                                 {% endfor %}
