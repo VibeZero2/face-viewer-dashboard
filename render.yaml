@@ -25,5 +25,7 @@ services:
         value: production
       - key: PORT
         value: 10000
+      - key: WEB_CONCURRENCY
+        value: "1"
     healthCheckPath: /
     autoDeploy: true

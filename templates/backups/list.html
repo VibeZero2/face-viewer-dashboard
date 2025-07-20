@@ -1,0 +1,130 @@
+{% extends "base_simple.html" %}
+
+{% block title %}Data Backups - Face Viewer Study{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>Data Backups</h1>
+            <p class="text-muted">Browse and restore data backups</p>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card">
+                <div class="card-header bg-light">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Available Backups</h5>
+                        <a href="{{ url_for('backups.create_backup') }}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-plus"></i> Create Backup
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Filename</th>
+                                    <th>Reason</th>
+                                    <th>Size</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for backup in backups %}
+                                <tr>
+                                    <td>{{ backup.timestamp }}</td>
+                                    <td>{{ backup.filename }}</td>
+                                    <td>{{ backup.reason }}</td>
+                                    <td>{{ (backup.size_bytes / 1024) | round(1) }} KB</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('backups.download_backup', filename=backup.filename) }}" class="btn btn-outline-secondary">
+                                                <i class="fas fa-download"></i> Download
+                                            </a>
+                                            <button type="button" class="btn btn-outline-warning" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#restoreModal" 
+                                                    data-backup-filename="{{ backup.filename }}"
+                                                    data-backup-timestamp="{{ backup.timestamp }}">
+                                                <i class="fas fa-undo"></i> Restore
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <p class="text-muted mb-0">No backups available</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Restore Confirmation Modal -->
+<div class="modal fade" id="restoreModal" tabindex="-1" aria-labelledby="restoreModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="restoreModalLabel">Confirm Restore</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> Warning: This will replace the current data with the backup data.
+                </div>
+                <p>Are you sure you want to restore the backup from <strong id="restoreTimestamp"></strong>?</p>
+                <p>A backup of the current data will be created before restoring.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('backups.restore_backup') }}" method="POST">
+                    <input type="hidden" name="filename" id="restoreFilename">
+                    <button type="submit" class="btn btn-warning">Restore Backup</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set up restore modal
+        const restoreModal = document.getElementById('restoreModal');
+        if (restoreModal) {
+            restoreModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const filename = button.getAttribute('data-backup-filename');
+                const timestamp = button.getAttribute('data-backup-timestamp');
+                
+                const restoreFilename = document.getElementById('restoreFilename');
+                const restoreTimestamp = document.getElementById('restoreTimestamp');
+                
+                restoreFilename.value = filename;
+                restoreTimestamp.textContent = timestamp;
+            });
+        }
+    });
+</script>
+{% endblock %}
