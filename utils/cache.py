@@ -1,6 +1,7 @@
 """
 Caching utilities for Face Viewer Dashboard
 Provides caching functionality for expensive operations
+Version: 1.1 - Explicit cache object for Render deployment
 """
 
 import functools
