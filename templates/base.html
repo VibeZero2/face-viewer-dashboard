@@ -93,7 +93,7 @@
 
     <div class="container-fluid">
         <div class="row">
-            {% if current_user.is_authenticated %}
+            {% if false %}
             <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
                 <div class="position-sticky pt-3">
                     <div class="px-3 mb-4">
@@ -119,12 +119,12 @@
                     </div>
                     <ul class="nav flex-column">
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('download_all') }}">
+                            <a class="nav-link" href="{{ url_for('export.index') }}">
                                 <i class="fas fa-file-archive me-2"></i> Download All Data
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('check_abandoned_sessions') }}" onclick="return confirmAction('Are you sure you want to check for abandoned sessions?');">
+                            <a class="nav-link" href="#" onclick="alert('This feature is not available in the minimal version')">
                                 <i class="fas fa-clock me-2"></i> Check Abandoned Sessions
                             </a>
                         </li>
@@ -133,7 +133,7 @@
             </nav>
             {% endif %}
 
-            <main class="{% if current_user.is_authenticated %}col-md-9 ms-sm-auto col-lg-10 px-md-4{% else %}col-md-12{% endif %}">
+            <main class="col-md-12">
                 {% with messages = get_flashed_messages() %}
                 {% if messages %}
                 <div class="alert alert-info mt-3">
