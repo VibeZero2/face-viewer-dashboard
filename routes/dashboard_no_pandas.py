@@ -24,9 +24,12 @@ def dashboard():
     
     # Render dashboard template
     return render_template(
-        'dashboard_cached.html',
-        stats=stats,
+        'dashboard.html',
+        title='Dashboard',
+        summary_stats=stats,
+        participants=stats.get('participants', {}),
         recent_activity=recent_activity,
-        use_demo_data=use_demo_data,
-        url_for_map={}
+        trust_distribution=stats.get('trust_distribution', {}),
+        trust_boxplot=stats.get('trust_boxplot', {}),
+        trust_histogram=stats.get('trust_histogram', {})
     )
