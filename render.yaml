@@ -4,7 +4,7 @@ services:
     name: face-viewer-dashboard
     env: python
     runtime: python3.12
-    buildCommand: ./build.sh
+    buildCommand: ./build_clean.sh
     startCommand: gunicorn wsgi:application
     envVars:
       - key: FLASK_SECRET_KEY
