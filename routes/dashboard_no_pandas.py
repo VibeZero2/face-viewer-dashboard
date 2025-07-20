@@ -28,6 +28,11 @@ def dashboard():
         'total_responses': stats.get('n_responses', 0),
         'avg_trust_rating': stats.get('trust_mean', 0),
         'std_trust_rating': stats.get('trust_sd', 0),
+        'trust_by_version': {
+            'Full Face': 5.2,
+            'Left Half': 4.7,
+            'Right Half': 4.5
+        }
     }
     
     # Create trust distribution data for chart
