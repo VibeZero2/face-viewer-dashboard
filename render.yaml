@@ -1,3 +1,4 @@
+# Updated configuration to force deployment and block pandas
 services:
   - type: web
     name: face-viewer-dashboard
