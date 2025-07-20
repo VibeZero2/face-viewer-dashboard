@@ -1,0 +1,209 @@
+{% extends "base_simple.html" %}
+
+{% block title %}Admin Settings - Face Viewer Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+            <div class="position-sticky pt-3">
+                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                    <span>Admin</span>
+                </h6>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_dashboard') }}">
+                            <i class="bi bi-speedometer2 me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_users') }}">
+                            <i class="bi bi-people me-2"></i>User Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_roles') }}">
+                            <i class="bi bi-shield-lock me-2"></i>Roles & Permissions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_audit_logs') }}">
+                            <i class="bi bi-journal-text me-2"></i>Audit Logs
+                        </a>
+                    </li>
+                </ul>
+                
+                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                    <span>System</span>
+                </h6>
+                <ul class="nav flex-column mb-2">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('admin_settings') }}">
+                            <i class="bi bi-gear me-2"></i>Settings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin_logout') }}">
+                            <i class="bi bi-box-arrow-right me-2"></i>Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">System Settings</h1>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="row">
+                <!-- General Settings -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-sliders me-2"></i>General Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('admin_update_settings') }}">
+                                <input type="hidden" name="settings_type" value="general">
+                                <div class="mb-3">
+                                    <label for="site_title" class="form-label">Site Title</label>
+                                    <input type="text" class="form-control" id="site_title" name="site_title" value="{{ settings.site_title }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="session_timeout" class="form-label">Session Timeout (minutes)</label>
+                                    <input type="number" class="form-control" id="session_timeout" name="session_timeout" value="{{ settings.session_timeout }}" min="5" max="1440" required>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="maintenance_mode" name="maintenance_mode" {% if settings.maintenance_mode %}checked{% endif %}>
+                                        <label class="form-check-label" for="maintenance_mode">Maintenance Mode</label>
+                                    </div>
+                                    <small class="form-text text-muted">When enabled, only administrators can access the site.</small>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save General Settings</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Settings -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-shield-lock me-2"></i>Security Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('admin_update_settings') }}">
+                                <input type="hidden" name="settings_type" value="security">
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="force_ssl" name="force_ssl" {% if settings.force_ssl %}checked{% endif %}>
+                                        <label class="form-check-label" for="force_ssl">Force SSL</label>
+                                    </div>
+                                    <small class="form-text text-muted">Redirect all HTTP requests to HTTPS.</small>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="enable_2fa" name="enable_2fa" {% if settings.enable_2fa %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_2fa">Enable Two-Factor Authentication</label>
+                                    </div>
+                                    <small class="form-text text-muted">Require two-factor authentication for admin users.</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="max_login_attempts" class="form-label">Max Login Attempts</label>
+                                    <input type="number" class="form-control" id="max_login_attempts" name="max_login_attempts" value="{{ settings.max_login_attempts }}" min="3" max="10" required>
+                                    <small class="form-text text-muted">Number of failed login attempts before account lockout.</small>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Security Settings</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Data Settings -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-database me-2"></i>Data Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('admin_update_settings') }}">
+                                <input type="hidden" name="settings_type" value="data">
+                                <div class="mb-3">
+                                    <label for="data_directory" class="form-label">Data Directory</label>
+                                    <input type="text" class="form-control" id="data_directory" name="data_directory" value="{{ settings.data_directory }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="backup_directory" class="form-label">Backup Directory</label>
+                                    <input type="text" class="form-control" id="backup_directory" name="backup_directory" value="{{ settings.backup_directory }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="auto_backup" name="auto_backup" {% if settings.auto_backup %}checked{% endif %}>
+                                        <label class="form-check-label" for="auto_backup">Enable Automatic Backups</label>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="backup_frequency" class="form-label">Backup Frequency (days)</label>
+                                    <input type="number" class="form-control" id="backup_frequency" name="backup_frequency" value="{{ settings.backup_frequency }}" min="1" max="30" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Data Settings</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analytics Settings -->
+                <div class="col-md-6">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Analytics Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('admin_update_settings') }}">
+                                <input type="hidden" name="settings_type" value="analytics">
+                                <div class="mb-3">
+                                    <label for="r_path" class="form-label">R Executable Path</label>
+                                    <input type="text" class="form-control" id="r_path" name="r_path" value="{{ settings.r_path }}" placeholder="e.g., /usr/bin/R or C:\Program Files\R\R-4.1.0\bin\R.exe">
+                                    <small class="form-text text-muted">Path to R executable for statistical analysis.</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="spss_path" class="form-label">SPSS Executable Path</label>
+                                    <input type="text" class="form-control" id="spss_path" name="spss_path" value="{{ settings.spss_path }}" placeholder="e.g., /usr/bin/spss or C:\Program Files\IBM\SPSS\Statistics\26\stats.exe">
+                                    <small class="form-text text-muted">Path to SPSS executable for data export.</small>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="enable_r_analytics" name="enable_r_analytics" {% if settings.enable_r_analytics %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_r_analytics">Enable R Analytics</label>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="enable_spss_export" name="enable_spss_export" {% if settings.enable_spss_export %}checked{% endif %}>
+                                        <label class="form-check-label" for="enable_spss_export">Enable SPSS Export</label>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Analytics Settings</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

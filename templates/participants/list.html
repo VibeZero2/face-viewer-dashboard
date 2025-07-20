@@ -1,0 +1,173 @@
+{% extends "base_simple.html" %}
+
+{% block title %}Participants - Face Viewer Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+            <div class="position-sticky pt-3">
+                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                    <span>Analytics</span>
+                </h6>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('analytics_dashboard') }}">
+                            <i class="bi bi-graph-up me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('analytics_reports') }}">
+                            <i class="bi bi-file-earmark-bar-graph me-2"></i>Reports
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('analytics_export') }}">
+                            <i class="bi bi-download me-2"></i>Export
+                        </a>
+                    </li>
+                </ul>
+                
+                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                    <span>Participants</span>
+                </h6>
+                <ul class="nav flex-column mb-2">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('participants_list') }}">
+                            <i class="bi bi-people me-2"></i>All Participants
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Participants</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <div class="btn-group me-2">
+                        <button type="button" class="btn btn-sm btn-outline-danger" id="bulkDeleteBtn" disabled>
+                            <i class="bi bi-trash me-1"></i>Delete Selected
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <!-- Participants Table -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">All Participants</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="bulkForm" action="{{ url_for('admin_delete_participant') }}" method="POST">
+                                <input type="hidden" name="bulk" value="1">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>
+                                                    <input type="checkbox" id="selectAll" class="form-check-input">
+                                                </th>
+                                                <th>Participant ID</th>
+                                                <th>First Submission</th>
+                                                <th>Responses</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for row in participants %}
+                                            <tr>
+                                                <td>
+                                                    <input type="checkbox" name="pid" value="{{ row.pid }}" class="form-check-input participant-check">
+                                                </td>
+                                                <td>{{ row.pid }}</td>
+                                                <td>{{ row.start_time }}</td>
+                                                <td>{{ row.submissions }}</td>
+                                                <td>
+                                                    <a href="{{ url_for('participant_detail', pid=row.pid) }}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="bi bi-eye"></i> View
+                                                    </a>
+                                                    <form action="{{ url_for('admin_delete_participant') }}" method="POST" class="d-inline">
+                                                        <input type="hidden" name="pid" value="{{ row.pid }}">
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this participant? This action cannot be undone.');">
+                                                            <i class="bi bi-trash"></i> Delete
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle select all checkbox
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const participantCheckboxes = document.querySelectorAll('.participant-check');
+        const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+        const bulkForm = document.getElementById('bulkForm');
+        
+        // Update bulk delete button state
+        function updateBulkDeleteButton() {
+            const checkedCount = document.querySelectorAll('.participant-check:checked').length;
+            bulkDeleteBtn.disabled = checkedCount === 0;
+        }
+        
+        // Select all checkbox
+        selectAllCheckbox.addEventListener('change', function() {
+            participantCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+            updateBulkDeleteButton();
+        });
+        
+        // Individual checkboxes
+        participantCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateBulkDeleteButton();
+                
+                // Update select all checkbox
+                const allChecked = document.querySelectorAll('.participant-check:checked').length === participantCheckboxes.length;
+                selectAllCheckbox.checked = allChecked;
+            });
+        });
+        
+        // Bulk delete button
+        bulkDeleteBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const checkedCount = document.querySelectorAll('.participant-check:checked').length;
+            if (checkedCount === 0) {
+                return;
+            }
+            
+            if (confirm(`Are you sure you want to delete ${checkedCount} participant(s)? This action cannot be undone.`)) {
+                bulkForm.submit();
+            }
+        });
+    });
+</script>
+{% endblock %}
+{% endblock %}

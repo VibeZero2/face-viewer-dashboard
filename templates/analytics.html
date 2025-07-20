@@ -1,0 +1,660 @@
+{% extends "base_simple.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">Face Perception Analytics</h1>
+    
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-dark text-light border-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Total Participants</h5>
+                    <p class="card-text display-4">{{ summary_stats.total_participants }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark text-light border-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Total Responses</h5>
+                    <p class="card-text display-4">{{ summary_stats.total_responses }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark text-light border-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Avg Trust Rating</h5>
+                    <p class="card-text display-4">{{ summary_stats.avg_trust_rating }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-dark text-light border-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Trust StdDev</h5>
+                    <p class="card-text display-4">{{ summary_stats.std_trust_rating }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Analytics Tabs -->
+    <ul class="nav nav-tabs mb-4" id="analyticsTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="r-analysis-tab" data-bs-toggle="tab" data-bs-target="#r-analysis" type="button" role="tab" aria-controls="r-analysis" aria-selected="true">R Analysis</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="export-tab" data-bs-toggle="tab" data-bs-target="#export" type="button" role="tab" aria-controls="export" aria-selected="false">Export Data</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="spss-tab" data-bs-toggle="tab" data-bs-target="#spss" type="button" role="tab" aria-controls="spss" aria-selected="false">SPSS Integration</button>
+        </li>
+    </ul>
+    
+    <div class="tab-content" id="analyticsTabsContent">
+        <!-- R Analysis Tab -->
+        <div class="tab-pane fade show active" id="r-analysis" role="tabpanel" aria-labelledby="r-analysis-tab">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card bg-dark text-light mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0">Run Statistical Analysis</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="analysisForm">
+                                <div class="mb-3">
+                                    <label for="analysisType" class="form-label">Analysis Type</label>
+                                    <select class="form-select bg-dark text-light" id="analysisType" required>
+                                        <option value="" selected disabled>Select analysis...</option>
+                                        {% for analysis in available_analyses %}
+                                        <option value="{{ analysis.id }}">{{ analysis.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text text-light" id="analysisDescription"></div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Variables</label>
+                                    <div id="variableSelectors">
+                                        <!-- Variable selectors will be added dynamically -->
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-warning">Run Analysis</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-8">
+                    <div class="card bg-dark text-light">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0">Analysis Results</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="analysisResults">
+                                <div class="text-center text-muted">
+                                    <p>Select an analysis type and run it to see results</p>
+                                </div>
+                            </div>
+                            <div id="resultsLoading" class="text-center d-none">
+                                <div class="spinner-border text-warning" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2">Running analysis...</p>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <button id="downloadResults" class="btn btn-outline-warning" disabled>Download Results</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Export Tab -->
+        <div class="tab-pane fade" id="export" role="tabpanel" aria-labelledby="export-tab">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card bg-dark text-light mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0">Export Options</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="exportForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Data Selection</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="dataSelection" id="fullDataset" value="full" checked>
+                                        <label class="form-check-label" for="fullDataset">
+                                            Full Dataset
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="dataSelection" id="filteredDataset" value="filtered">
+                                        <label class="form-check-label" for="filteredDataset">
+                                            Current Filtered View
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Export Format</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="exportCsv" checked>
+                                        <label class="form-check-label" for="exportCsv">
+                                            CSV (.csv)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="exportSpss">
+                                        <label class="form-check-label" for="exportSpss">
+                                            SPSS (.sav)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="exportEncrypted">
+                                        <label class="form-check-label" for="exportEncrypted">
+                                            Encrypted (.csv.enc)
+                                        </label>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="filenamePrefix" class="form-label">Filename Prefix</label>
+                                    <input type="text" class="form-control bg-dark text-light" id="filenamePrefix" value="face_data_export">
+                                    <div class="form-text text-light">Timestamp will be added automatically</div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-warning">Export Data</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card bg-dark text-light">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0">Export History</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-dark table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Timestamp</th>
+                                            <th>Format</th>
+                                            <th>Size</th>
+                                            <th>Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="exportHistory">
+                                        <tr>
+                                            <td colspan="4" class="text-center text-muted">No export history available</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SPSS Tab -->
+        <div class="tab-pane fade" id="spss" role="tabpanel" aria-labelledby="spss-tab">
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card bg-dark text-light mb-4">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0">SPSS Export Options</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="spssForm">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Variable Labels</label>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="includeLabels" checked>
+                                                <label class="form-check-label" for="includeLabels">
+                                                    Include variable labels
+                                                </label>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label class="form-label">Value Labels</label>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="includeValueLabels" checked>
+                                                <label class="form-check-label" for="includeValueLabels">
+                                                    Include value labels
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">Data Selection</label>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="spssDataSelection" id="spssFullDataset" value="full" checked>
+                                                <label class="form-check-label" for="spssFullDataset">
+                                                    Full Dataset
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="spssDataSelection" id="spssFilteredDataset" value="filtered">
+                                                <label class="form-check-label" for="spssFilteredDataset">
+                                                    Current Filtered View
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-warning">Export to SPSS</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="card bg-dark text-light">
+                        <div class="card-header bg-warning text-dark">
+                            <h5 class="mb-0">SPSS Integration Notes</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-warning">
+                                <h5 class="alert-heading">About SPSS Integration</h5>
+                                <p>This dashboard provides SPSS export functionality for statistical analysis. The exported .sav files can be opened directly in SPSS for advanced analysis.</p>
+                                <hr>
+                                <p class="mb-0">For full R integration and advanced statistical analysis, please use the R Analysis tab.</p>
+                            </div>
+                            
+                            <h5 class="mt-4">Variable Mapping</h5>
+                            <div class="table-responsive">
+                                <table class="table table-dark table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Variable Name</th>
+                                            <th>SPSS Label</th>
+                                            <th>Type</th>
+                                            <th>Measure</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for column in columns %}
+                                        <tr>
+                                            <td>{{ column.id }}</td>
+                                            <td>{{ column.name }}</td>
+                                            <td>Numeric</td>
+                                            <td>Scale</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Analysis type descriptions
+        const analysisDescriptions = {
+            'descriptive': 'Summary statistics (mean, median, etc.)',
+            'ttest': 'Compare means between two groups',
+            'anova': 'Analysis of variance between groups',
+            'correlation': 'Measure relationship between variables',
+            'regression': 'Predict values based on other variables'
+        };
+        
+        // Available columns for analysis
+        const columns = JSON.parse('{{ columns|tojson|safe }}') || [];
+        
+        // Update analysis description when type changes
+        document.getElementById('analysisType').addEventListener('change', function() {
+            const description = analysisDescriptions[this.value] || '';
+            document.getElementById('analysisDescription').textContent = description;
+            
+            // Update variable selectors based on analysis type
+            updateVariableSelectors(this.value);
+        });
+        
+        // Function to update variable selectors based on analysis type
+        function updateVariableSelectors(analysisType) {
+            const container = document.getElementById('variableSelectors');
+            container.innerHTML = '';
+            
+            let numVariables = 1;
+            let labels = ['Variable'];
+            
+            if (analysisType === 'ttest' || analysisType === 'correlation') {
+                numVariables = 2;
+                labels = ['Variable 1', 'Variable 2'];
+            } else if (analysisType === 'anova' || analysisType === 'regression') {
+                numVariables = 2;
+                labels = ['Dependent Variable', 'Independent Variable'];
+            }
+            
+            for (let i = 0; i < numVariables; i++) {
+                const div = document.createElement('div');
+                div.className = 'mb-2';
+                
+                const label = document.createElement('label');
+                label.className = 'form-label';
+                label.textContent = labels[i];
+                
+                const select = document.createElement('select');
+                select.className = 'form-select bg-dark text-light';
+                select.id = `variable${i + 1}`;
+                select.required = true;
+                
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.disabled = true;
+                defaultOption.selected = true;
+                defaultOption.textContent = 'Select variable...';
+                select.appendChild(defaultOption);
+                
+                columns.forEach(column => {
+                    const option = document.createElement('option');
+                    option.value = column.id;
+                    option.textContent = column.name;
+                    select.appendChild(option);
+                });
+                
+                div.appendChild(label);
+                div.appendChild(select);
+                container.appendChild(div);
+            }
+        }
+        
+        // Handle analysis form submission
+        document.getElementById('analysisForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const analysisType = document.getElementById('analysisType').value;
+            const variables = [];
+            
+            // Get selected variables
+            const selects = document.querySelectorAll('#variableSelectors select');
+            selects.forEach(select => {
+                variables.push(select.value);
+            });
+            
+            // Show loading indicator
+            document.getElementById('resultsLoading').classList.remove('d-none');
+            document.getElementById('analysisResults').classList.add('d-none');
+            
+            // Run analysis via API
+            fetch('/api/run_analysis', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    analysis_type: analysisType,
+                    variables: variables
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide loading indicator
+                document.getElementById('resultsLoading').classList.add('d-none');
+                document.getElementById('analysisResults').classList.remove('d-none');
+                
+                // Display results
+                displayAnalysisResults(data);
+                
+                // Enable download button
+                document.getElementById('downloadResults').disabled = false;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('resultsLoading').classList.add('d-none');
+                document.getElementById('analysisResults').classList.remove('d-none');
+                document.getElementById('analysisResults').innerHTML = `
+                    <div class="alert alert-danger">
+                        <h5 class="alert-heading">Error</h5>
+                        <p>An error occurred while running the analysis.</p>
+                    </div>
+                `;
+            });
+        });
+        
+        // Function to display analysis results
+        function displayAnalysisResults(data) {
+            const container = document.getElementById('analysisResults');
+            
+            let html = `
+                <h5>Analysis: ${data.analysis_type}</h5>
+                <p>Variables: ${data.variables.join(', ')}</p>
+                <hr>
+            `;
+            
+            if (data.analysis_type === 'descriptive') {
+                html += `
+                    <table class="table table-dark">
+                        <thead>
+                            <tr>
+                                <th>Statistic</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Mean</td>
+                                <td>${data.results.summary.mean}</td>
+                            </tr>
+                            <tr>
+                                <td>Median</td>
+                                <td>${data.results.summary.median}</td>
+                            </tr>
+                            <tr>
+                                <td>Minimum</td>
+                                <td>${data.results.summary.min}</td>
+                            </tr>
+                            <tr>
+                                <td>Maximum</td>
+                                <td>${data.results.summary.max}</td>
+                            </tr>
+                            <tr>
+                                <td>Q1 (25%)</td>
+                                <td>${data.results.summary.q1}</td>
+                            </tr>
+                            <tr>
+                                <td>Q3 (75%)</td>
+                                <td>${data.results.summary.q3}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                `;
+            } else if (data.analysis_type === 'ttest') {
+                html += `
+                    <div class="alert ${data.results.significant ? 'alert-success' : 'alert-secondary'}">
+                        <h5 class="alert-heading">T-Test Results</h5>
+                        <p>t = ${data.results.t_statistic}, df = ${data.results.df}, p = ${data.results.p_value}</p>
+                        <hr>
+                        <p class="mb-0">Result: ${data.results.significant ? 'Significant difference found' : 'No significant difference'}</p>
+                    </div>
+                `;
+            } else if (data.analysis_type === 'anova') {
+                html += `
+                    <div class="alert ${data.results.significant ? 'alert-success' : 'alert-secondary'}">
+                        <h5 class="alert-heading">ANOVA Results</h5>
+                        <p>F(${data.results.df[0]},${data.results.df[1]}) = ${data.results.f_statistic}, p = ${data.results.p_value}</p>
+                        <hr>
+                        <p class="mb-0">Result: ${data.results.significant ? 'Significant difference found' : 'No significant difference'}</p>
+                    </div>
+                `;
+            } else if (data.analysis_type === 'correlation') {
+                html += `
+                    <div class="alert ${data.results.significant ? 'alert-success' : 'alert-secondary'}">
+                        <h5 class="alert-heading">Correlation Results</h5>
+                        <p>r = ${data.results.correlation}, p = ${data.results.p_value}</p>
+                        <hr>
+                        <p class="mb-0">Result: ${data.results.significant ? 'Significant correlation found' : 'No significant correlation'}</p>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // Handle export form submission
+        document.getElementById('exportForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const dataSelection = document.querySelector('input[name="dataSelection"]:checked').value;
+            const exportCsv = document.getElementById('exportCsv').checked;
+            const exportSpss = document.getElementById('exportSpss').checked;
+            const exportEncrypted = document.getElementById('exportEncrypted').checked;
+            const filenamePrefix = document.getElementById('filenamePrefix').value;
+            
+            if (exportCsv) {
+                fetch('/api/export_csv', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        data_selection: dataSelection,
+                        filename_prefix: filenamePrefix
+                    }),
+                })
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `${filenamePrefix}_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '')}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    
+                    // Update export history
+                    updateExportHistory('CSV', a.download);
+                });
+            }
+            
+            if (exportSpss) {
+                fetch('/api/export_spss', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        data_selection: dataSelection,
+                        filename_prefix: filenamePrefix,
+                        include_labels: document.getElementById('includeLabels').checked
+                    }),
+                })
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `${filenamePrefix}_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '')}.sav`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    
+                    // Update export history
+                    updateExportHistory('SPSS', a.download);
+                });
+            }
+        });
+        
+        // Handle SPSS form submission
+        document.getElementById('spssForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const dataSelection = document.querySelector('input[name="spssDataSelection"]:checked').value;
+            const includeLabels = document.getElementById('includeLabels').checked;
+            const includeValueLabels = document.getElementById('includeValueLabels').checked;
+            
+            fetch('/api/export_spss', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    data_selection: dataSelection,
+                    include_labels: includeLabels,
+                    include_value_labels: includeValueLabels
+                }),
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `face_data_export_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '')}.sav`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                
+                // Update export history
+                updateExportHistory('SPSS', a.download);
+            });
+        });
+        
+        // Function to update export history
+        function updateExportHistory(format, filename) {
+            const tbody = document.getElementById('exportHistory');
+            
+            // Clear "no history" message if present
+            if (tbody.querySelector('td[colspan="4"]')) {
+                tbody.innerHTML = '';
+            }
+            
+            const row = document.createElement('tr');
+            
+            const timestampCell = document.createElement('td');
+            timestampCell.textContent = new Date().toLocaleString();
+            
+            const formatCell = document.createElement('td');
+            formatCell.textContent = format;
+            
+            const sizeCell = document.createElement('td');
+            sizeCell.textContent = 'N/A';
+            
+            const actionCell = document.createElement('td');
+            const downloadLink = document.createElement('a');
+            downloadLink.href = '#';
+            downloadLink.className = 'btn btn-sm btn-outline-warning';
+            downloadLink.textContent = 'Download';
+            downloadLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                alert('This is a mock download. In a production environment, this would download the previously exported file.');
+            });
+            actionCell.appendChild(downloadLink);
+            
+            row.appendChild(timestampCell);
+            row.appendChild(formatCell);
+            row.appendChild(sizeCell);
+            row.appendChild(actionCell);
+            
+            tbody.insertBefore(row, tbody.firstChild);
+        }
+        
+        // Handle download results button
+        document.getElementById('downloadResults').addEventListener('click', function() {
+            alert('This is a mock download. In a production environment, this would download the analysis results in various formats.');
+        });
+    });
+</script>
+{% endblock %}
