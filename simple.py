@@ -2,13 +2,25 @@
 Minimal Flask application for Face Viewer Dashboard
 This is a simplified version that uses minimal dependencies
 """
-from flask import Flask, render_template_string
+from flask import Flask, render_template_string, render_template
 import os
 import sys
+
+# Import blueprints
+from routes.dashboard_no_pandas import dashboard_bp
+from routes.analytics_no_pandas import analytics_bp
+from routes.export_no_pandas import export_bp
+from routes.participants_no_pandas import participants_bp
 
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('DASHBOARD_SECRET_KEY', os.urandom(24).hex())
+
+# Register blueprints
+app.register_blueprint(dashboard_bp)
+app.register_blueprint(analytics_bp)
+app.register_blueprint(export_bp)
+app.register_blueprint(participants_bp)
 
 @app.route('/')
 def index():
