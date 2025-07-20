@@ -14,7 +14,7 @@ from analytics.spss_export import SPSSExporter
 from analytics.r_integration import RAnalytics
 
 # Import utilities
-from utils.cache import cached, clear_cache
+from utils.cache import cached, clear_cache, cache
 from utils.dashboard_stats import get_summary_stats, get_recent_activity
 from utils.backups import backup_csv, list_backups, restore_backup
 from utils.export_history import log_export, get_export_history
