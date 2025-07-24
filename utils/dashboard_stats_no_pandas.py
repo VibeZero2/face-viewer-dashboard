@@ -11,6 +11,7 @@ from utils.cache import cached
 def load_data():
     """
     Load participant data from CSV without pandas
+    Handles both standard CSV and malformed CSV with fields on separate lines
     
     Returns:
         List of dictionaries containing participant data
@@ -22,10 +23,56 @@ def load_data():
             # Return empty list if no data exists
             return []
         
-        # Load data
-        with open(data_path, 'r', newline='', encoding='utf-8') as f:
-            reader = csv.DictReader(f)
-            return list(reader)
+        # First try standard CSV format
+        try:
+            with open(data_path, 'r', newline='', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                data = list(reader)
+                if data and len(data) > 0:
+                    return data
+        except Exception as csv_error:
+            print(f"Standard CSV reading failed: {csv_error}")
+        
+        # If standard CSV reading fails, try handling malformed CSV with fields on separate lines
+        try:
+            with open(data_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            # Check if this might be a malformed CSV with fields on separate lines
+            if len(lines) > 0 and ',' not in lines[0]:
+                # Extract header fields
+                headers = []
+                data_rows = []
+                current_row = {}
+                header_index = 0
+                
+                for i, line in enumerate(lines):
+                    line = line.strip()
+                    if not line:
+                        continue
+                    
+                    if i < 7:  # Assuming the first 7 non-empty lines are headers
+                        headers.append(line)
+                    else:
+                        field_index = (i - 7) % len(headers)
+                        if field_index == 0 and i > 7:
+                            # Start a new row
+                            data_rows.append(current_row)
+                            current_row = {}
+                        
+                        current_row[headers[field_index]] = line
+                
+                # Don't forget to add the last row
+                if current_row:
+                    data_rows.append(current_row)
+                
+                print(f"Processed {len(data_rows)} rows from malformed CSV")
+                return data_rows
+        except Exception as malformed_error:
+            print(f"Malformed CSV handling failed: {malformed_error}")
+        
+        # If all attempts fail, return empty list
+        return []
     except Exception as e:
         print(f"Error loading data: {e}")
         return []

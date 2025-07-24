@@ -33,9 +33,11 @@ def dashboard():
             'total_participants': stats.get('n_participants', 0),
             'total_responses': stats.get('n_responses', 0),
             'avg_trust_rating': stats.get('trust_mean', 0),
+            'trust_mean': stats.get('trust_mean', 0),  # Add this for template compatibility
             'std_trust_rating': stats.get('trust_sd', 0),
+            'trust_sd': stats.get('trust_sd', 0),  # Add this for template compatibility
             'trust_by_version': {
-                'Full Face': 5.2,
+                'Full Face': stats.get('trust_mean', 5.2),
                 'Left Half': 4.7,
                 'Right Half': 4.5
             }
