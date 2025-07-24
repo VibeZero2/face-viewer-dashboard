@@ -5,9 +5,22 @@
 {% block content %}
 <div class="container-fluid">
     <h1 class="mt-4 mb-4">Face Viewer Study Dashboard</h1>
+    
+    {% if error_message %}
+    <div class="alert alert-danger">
+        <i class="fas fa-exclamation-circle"></i> {{ error_message }}
+    </div>
+    {% endif %}
+    
     {% if use_demo_data %}
     <div class="alert alert-warning">
         <i class="fas fa-exclamation-triangle"></i> Demo Mode: Using sample data for demonstration purposes.
+    </div>
+    {% endif %}
+    
+    {% if data_file_exists is defined and not data_file_exists %}
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> No data file found. Please upload data to see actual statistics.
     </div>
     {% endif %}
     
