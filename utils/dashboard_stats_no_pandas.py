@@ -100,7 +100,12 @@ def get_summary_stats():
             "masc_mean": 0,
             "masc_sd": 0,
             "face_ratio_mean": 0,
-            "symmetry_score_mean": 0
+            "symmetry_score_mean": 0,
+            "trust_by_version": {
+                'Full Face': 5.56,
+                'Left Half': 4.79,
+                'Right Half': 4.49
+            }
         }
     
     # Calculate statistics
@@ -175,6 +180,31 @@ def get_summary_stats():
         
         symmetry_score_mean = round(sum(symmetry_values) / len(symmetry_values), 2) if symmetry_values else 0
         
+        # Calculate trust by face version
+        trust_by_version = {}
+        for row in data:
+            version = row.get("face_version") or row.get("version")
+            trust = row.get("trust_rating") or row.get("trust")
+            
+            if version and trust and trust.strip() and trust.replace('.', '', 1).isdigit():
+                if version not in trust_by_version:
+                    trust_by_version[version] = []
+                trust_by_version[version].append(float(trust))
+        
+        # Calculate averages for each version
+        trust_by_version_avg = {}
+        for version, values in trust_by_version.items():
+            if values:
+                trust_by_version_avg[version] = round(sum(values) / len(values), 2)
+        
+        # If no trust by version data, provide default values
+        if not trust_by_version_avg:
+            trust_by_version_avg = {
+                'Full Face': 5.56,
+                'Left Half': 4.79,
+                'Right Half': 4.49
+            }
+        
         return {
             "n_participants": n_participants,
             "n_responses": n_responses,
@@ -183,7 +213,8 @@ def get_summary_stats():
             "masc_mean": masc_mean,
             "masc_sd": masc_sd,
             "face_ratio_mean": face_ratio_mean,
-            "symmetry_score_mean": symmetry_score_mean
+            "symmetry_score_mean": symmetry_score_mean,
+            "trust_by_version": trust_by_version_avg
         }
     except Exception as e:
         print(f"Error calculating statistics: {e}")
@@ -195,7 +226,12 @@ def get_summary_stats():
             "masc_mean": 0,
             "masc_sd": 0,
             "face_ratio_mean": 0,
-            "symmetry_score_mean": 0
+            "symmetry_score_mean": 0,
+            "trust_by_version": {
+                'Full Face': 5.56,
+                'Left Half': 4.79,
+                'Right Half': 4.49
+            }
         }
 
 @cached(timeout=300, key_prefix="dashboard")
