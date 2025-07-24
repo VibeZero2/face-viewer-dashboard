@@ -20,15 +20,18 @@ def load_data():
         # Check if data file exists
         data_path = os.path.join(os.getcwd(), 'data', 'working_data.csv')
         if not os.path.exists(data_path):
+            print(f"Data file not found at {data_path}")
             # Return empty list if no data exists
             return []
         
+        print(f"Loading data from {data_path}")
         # First try standard CSV format
         try:
             with open(data_path, 'r', newline='', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 data = list(reader)
                 if data and len(data) > 0:
+                    print(f"Successfully loaded {len(data)} rows from CSV")
                     return data
         except Exception as csv_error:
             print(f"Standard CSV reading failed: {csv_error}")
@@ -117,8 +120,13 @@ def get_summary_stats():
         trust_values = []
         for row in data:
             trust = row.get("trust_rating") or row.get("trust")
-            if trust and trust.strip() and trust.replace('.', '', 1).isdigit():
-                trust_values.append(float(trust))
+            if trust:
+                # Handle both string and numeric values
+                try:
+                    trust_values.append(float(trust))
+                except (ValueError, TypeError):
+                    if isinstance(trust, str) and trust.strip() and trust.replace('.', '', 1).isdigit():
+                        trust_values.append(float(trust))
         
         trust_mean = round(sum(trust_values) / len(trust_values), 2) if trust_values else 0
         
