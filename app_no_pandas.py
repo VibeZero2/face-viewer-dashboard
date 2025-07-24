@@ -47,7 +47,8 @@ app.register_blueprint(analytics_bp)
 # Define routes
 @app.route('/')
 def index():
-    return render_template('index.html', title='Face Viewer Dashboard')
+    # Redirect root URL to the dashboard page
+    return redirect(url_for('dashboard_bp.dashboard'))
 
 @app.route('/dashboard')
 def dashboard():
