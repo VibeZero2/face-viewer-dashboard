@@ -24,7 +24,13 @@ app.register_blueprint(participants_bp)
 
 @app.route('/')
 def index():
-    """Render the index page"""
+    """Redirect to the dashboard page"""
+    from flask import redirect, url_for
+    return redirect(url_for('dashboard.dashboard'))
+    
+# Legacy index page, keeping for reference
+def legacy_index():
+    """Render the legacy index page"""
     return render_template_string("""
     <!DOCTYPE html>
     <html>
