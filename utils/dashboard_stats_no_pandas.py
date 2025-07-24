@@ -125,8 +125,8 @@ def get_summary_stats():
                 try:
                     trust_values.append(float(trust))
                 except (ValueError, TypeError):
-                    if isinstance(trust, str) and trust.strip() and trust.replace('.', '', 1).isdigit():
-                        trust_values.append(float(trust))
+                    if isinstance(trust, str) and trust.strip() and trust.strip().replace('.', '', 1).isdigit():
+                        trust_values.append(float(trust.strip()))
         
         trust_mean = round(sum(trust_values) / len(trust_values), 2) if trust_values else 0
         
@@ -141,8 +141,12 @@ def get_summary_stats():
         masc_values = []
         for row in data:
             masc = row.get("masculinity_rating") or row.get("masculinity")
-            if masc and masc.strip() and masc.replace('.', '', 1).isdigit():
-                masc_values.append(float(masc))
+            if masc:
+                try:
+                    masc_values.append(float(masc))
+                except (ValueError, TypeError):
+                    if isinstance(masc, str) and masc.strip() and masc.strip().replace('.', '', 1).isdigit():
+                        masc_values.append(float(masc.strip()))
         
         masc_mean = round(sum(masc_values) / len(masc_values), 2) if masc_values else 0
         

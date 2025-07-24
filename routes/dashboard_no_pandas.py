@@ -10,6 +10,21 @@ import os
 # Create blueprint
 dashboard_bp = Blueprint('dashboard', __name__)
 
+@dashboard_bp.route('/api/dashboard/stats')
+def dashboard_stats_api():
+    """API endpoint to get fresh dashboard statistics"""
+    # Clear cache to ensure fresh data is loaded
+    from utils.cache import clear_cache
+    from flask import jsonify
+    
+    clear_cache()
+    
+    # Get fresh statistics
+    stats = get_summary_stats()
+    
+    # Return as JSON
+    return jsonify(stats)
+
 @dashboard_bp.route('/dashboard')
 def dashboard():
     """Display the main dashboard with cached statistics"""
@@ -19,6 +34,10 @@ def dashboard():
     data_file_exists = True
     use_demo_data = False
     error_message = None
+    
+    # Clear cache to ensure fresh data is loaded
+    from utils.cache import clear_cache
+    clear_cache()
     
     try:
         # Get cached summary statistics

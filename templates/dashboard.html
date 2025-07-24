@@ -19,13 +19,13 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <h6>Participants</h6>
-                                <p class="h3">{{ summary_stats.n_participants }}</p>
+                                <p class="h3" id="total-participants">{{ summary_stats.n_participants }}</p>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <h6>Total Responses</h6>
-                                <p class="h3">{{ summary_stats.n_responses }}</p>
+                                <p class="h3" id="total-responses">{{ summary_stats.n_responses }}</p>
                             </div>
                         </div>
                     </div>
@@ -33,13 +33,13 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <h6>Average Trust Rating</h6>
-                                <p class="h3">{{ "%.2f"|format(summary_stats.trust_mean) }}</p>
+                                <p class="h3" id="avg-trust-rating">{{ "%.2f"|format(summary_stats.trust_mean) }}</p>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <h6>Trust Rating Std Dev</h6>
-                                <p class="h3">{{ "%.2f"|format(summary_stats.trust_sd) }}</p>
+                                <p class="h3" id="trust-std-dev">{{ "%.2f"|format(summary_stats.trust_sd) }}</p>
                             </div>
                         </div>
                     </div>
@@ -53,7 +53,7 @@
                                         <th>Average Trust Rating</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="trust-by-version-body">
                                     <tr>
                                         <td>Full Face</td>
                                         <td>{{ "%.2f"|format(5.56) }}</td>
@@ -171,20 +171,20 @@
     data-histogram-layout="{{ trust_histogram.layout | tojson | safe }}"
     {% endif %}
     {% if trust_boxplot and trust_boxplot.data and trust_boxplot.layout %}
-    data-boxplot-data="{{ trust_boxplot.data | tojson | safe }}"
-    data-boxplot-layout="{{ trust_boxplot.layout | tojson | safe }}"
-    {% endif %}
-></div>
-
-<!-- Pure JavaScript for rendering plots -->
-<script type="text/javascript">
     document.addEventListener('DOMContentLoaded', function() {
-        // Get data from HTML data attributes
-        var plotDataElement = document.getElementById('plot-data');
+        // Force refresh data on page load
+        refreshDashboardData();
         
-        // Default histogram data
-        var histData = [{
-            x: [1, 2, 3, 4, 5, 6, 7],
+        // Function to refresh dashboard data
+        function refreshDashboardData() {
+            fetch('/api/dashboard/stats')
+                .then(response => response.json())
+                .then(data => {
+                    updateDashboardUI(data);
+                })
+                .catch(error => {
+                    console.error('Error refreshing dashboard data:', error);
+                });
             y: [5, 10, 23, 42, 35, 27, 15],
             type: 'bar',
             marker: {

@@ -309,6 +309,156 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Run default analysis on page load
+        runDefaultAnalysis();
+        
+        // Function to run default analysis
+        function runDefaultAnalysis() {
+            fetch('/api/run_analysis?analysis_type=trust_by_face')
+                .then(response => response.json())
+                .then(data => {
+                    renderAnalysisResults(data);
+                })
+                .catch(error => {
+                    console.error('Error running default analysis:', error);
+                });
+        }
+        
+        // Function to render analysis results
+        function renderAnalysisResults(data) {
+            if (!data || !data.success) {
+                console.error('Invalid analysis data:', data);
+                return;
+            }
+            
+            const resultsContainer = document.getElementById('analysisResults');
+            if (!resultsContainer) {
+                console.error('Results container not found');
+                return;
+            }
+            
+            // Clear previous results
+            resultsContainer.innerHTML = '';
+            resultsContainer.classList.remove('d-none');
+            
+            // Add title and summary
+            const titleElement = document.createElement('h4');
+            titleElement.textContent = data.title || 'Analysis Results';
+            titleElement.className = 'mb-3';
+            resultsContainer.appendChild(titleElement);
+            
+            // Add summary text if available
+            if (data.summary) {
+                const summaryElement = document.createElement('p');
+                summaryElement.textContent = data.summary;
+                summaryElement.className = 'mb-4';
+                resultsContainer.appendChild(summaryElement);
+            }
+            
+            // Render charts if available
+            if (data.charts && data.charts.length > 0) {
+                data.charts.forEach((chart, index) => {
+                    const chartContainer = document.createElement('div');
+                    chartContainer.className = 'mb-4';
+                    chartContainer.style.height = '300px';
+                    chartContainer.id = `chart-${index}`;
+                    resultsContainer.appendChild(chartContainer);
+                    
+                    // Create canvas for chart
+                    const canvas = document.createElement('canvas');
+                    canvas.id = `chart-canvas-${index}`;
+                    chartContainer.appendChild(canvas);
+                    
+                    // Create chart using Chart.js
+                    new Chart(canvas, {
+                        type: chart.type || 'bar',
+                        data: chart.data,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: chart.title || '',
+                                    color: '#ffffff'
+                                },
+                                legend: {
+                                    labels: {
+                                        color: '#ffffff'
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    ticks: {
+                                        color: '#ffffff'
+                                    },
+                                    grid: {
+                                        color: 'rgba(255, 255, 255, 0.1)'
+                                    }
+                                },
+                                x: {
+                                    ticks: {
+                                        color: '#ffffff'
+                                    },
+                                    grid: {
+                                        color: 'rgba(255, 255, 255, 0.1)'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+            
+            // Render tables if available
+            if (data.tables && data.tables.length > 0) {
+                data.tables.forEach(table => {
+                    const tableContainer = document.createElement('div');
+                    tableContainer.className = 'mb-4';
+                    
+                    // Add table title if available
+                    if (table.title) {
+                        const tableTitle = document.createElement('h5');
+                        tableTitle.textContent = table.title;
+                        tableTitle.className = 'mb-2';
+                        tableContainer.appendChild(tableTitle);
+                    }
+                    
+                    // Create table element
+                    const tableElement = document.createElement('table');
+                    tableElement.className = 'table table-dark table-striped';
+                    
+                    // Create table header
+                    const thead = document.createElement('thead');
+                    const headerRow = document.createElement('tr');
+                    table.headers.forEach(header => {
+                        const th = document.createElement('th');
+                        th.textContent = header;
+                        headerRow.appendChild(th);
+                    });
+                    thead.appendChild(headerRow);
+                    tableElement.appendChild(thead);
+                    
+                    // Create table body
+                    const tbody = document.createElement('tbody');
+                    table.rows.forEach(row => {
+                        const tr = document.createElement('tr');
+                        row.forEach(cell => {
+                            const td = document.createElement('td');
+                            td.textContent = cell;
+                            tr.appendChild(td);
+                        });
+                        tbody.appendChild(tr);
+                    });
+                    tableElement.appendChild(tbody);
+                    
+                    tableContainer.appendChild(tableElement);
+                    resultsContainer.appendChild(tableContainer);
+                });
+            }
+        }
+        
         // Analysis type descriptions
         const analysisDescriptions = {
             'descriptive': 'Summary statistics (mean, median, etc.)',
