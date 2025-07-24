@@ -48,7 +48,7 @@ app.register_blueprint(analytics_bp)
 @app.route('/')
 def index():
     # Redirect root URL to the dashboard page
-    return redirect(url_for('dashboard_bp.dashboard'))
+    return redirect(url_for('dashboard.dashboard'))
 
 @app.route('/dashboard')
 def dashboard():
