@@ -13,13 +13,18 @@ dashboard_bp = Blueprint('dashboard', __name__)
 @dashboard_bp.route('/dashboard')
 def dashboard():
     """Display the main dashboard with cached statistics"""
-    # Check if data file exists
+    # Check if data file exists and has content
     data_path = os.path.join(os.getcwd(), 'data', 'working_data.csv')
     data_file_exists = os.path.exists(data_path)
     
+    # Force use real data if file exists
+    use_demo_data = False
+    
     # Set error message if needed
     error_message = None
-    use_demo_data = os.environ.get('USE_DEMO_DATA', 'False').lower() == 'true' or not data_file_exists
+    if not data_file_exists:
+        error_message = "No data file found. Please upload data to see actual statistics."
+        use_demo_data = True
     
     try:
         # Get cached summary statistics
