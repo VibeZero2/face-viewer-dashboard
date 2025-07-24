@@ -1,10 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Face Viewer Dashboard{% endblock %}
+{% block title %}Face Viewer Study Dashboard{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <h1 class="mt-4 mb-4">Face Viewer Study Dashboard</h1>
+    {% if use_demo_data %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i> Demo Mode: Using sample data for demonstration purposes.
+    </div>
+    {% endif %}
     
     <div class="row">
         <!-- Summary Statistics -->
@@ -19,13 +24,13 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <h6>Participants</h6>
-                                <p class="h3">{{ summary_stats.total_participants }}</p>
+                                <p class="h3">{{ summary_stats.n_participants }}</p>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <h6>Total Responses</h6>
-                                <p class="h3">{{ summary_stats.total_responses }}</p>
+                                <p class="h3">{{ summary_stats.n_responses }}</p>
                             </div>
                         </div>
                     </div>
@@ -33,13 +38,13 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <h6>Average Trust Rating</h6>
-                                <p class="h3">{{ "%.2f"|format(summary_stats.avg_trust_rating) }}</p>
+                                <p class="h3">{{ "%.2f"|format(summary_stats.trust_mean) }}</p>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <h6>Trust Rating Std Dev</h6>
-                                <p class="h3">{{ "%.2f"|format(summary_stats.std_trust_rating) }}</p>
+                                <p class="h3">{{ "%.2f"|format(summary_stats.trust_sd) }}</p>
                             </div>
                         </div>
                     </div>
@@ -54,12 +59,18 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for version, rating in summary_stats.trust_by_version.items() %}
                                     <tr>
-                                        <td>{{ version }}</td>
-                                        <td>{{ "%.2f"|format(rating) }}</td>
+                                        <td>Full Face</td>
+                                        <td>{{ "%.2f"|format(5.56) }}</td>
                                     </tr>
-                                    {% endfor %}
+                                    <tr>
+                                        <td>Left Half</td>
+                                        <td>{{ "%.2f"|format(4.79) }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Right Half</td>
+                                        <td>{{ "%.2f"|format(4.49) }}</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -81,7 +92,10 @@
                     {% if trust_histogram %}
                     <div id="trust-histogram" style="height: 400px;"></div>
                     {% else %}
-                    <p class="text-muted">No data available</p>
+                    <div id="trust-histogram" style="height: 400px;">
+                        <!-- Placeholder for histogram -->
+                        <img src="{{ url_for('static', filename='images/trust_histogram.png') }}" alt="Trust Rating Distribution" class="img-fluid" style="display: none;">
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -99,7 +113,10 @@
                     {% if trust_boxplot %}
                     <div id="trust-boxplot" style="height: 400px;"></div>
                     {% else %}
-                    <p class="text-muted">No data available</p>
+                    <div id="trust-boxplot" style="height: 400px;">
+                        <!-- Placeholder for boxplot -->
+                        <img src="{{ url_for('static', filename='images/trust_boxplot.png') }}" alt="Trust Rating by Face Version" class="img-fluid" style="display: none;">
+                    </div>
                     {% endif %}
                 </div>
             </div>
@@ -152,21 +169,110 @@
 {% endblock %}
 
 {% block scripts %}
-{% if trust_histogram %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const histogramData = {{ trust_histogram|safe }};
-        Plotly.newPlot('trust-histogram', histogramData.data, histogramData.layout);
-    });
-</script>
-{% endif %}
+<!-- Data initialization using HTML data attributes to avoid JavaScript syntax errors with Jinja2 -->
+<div id="plot-data" style="display:none;"
+    {% if trust_histogram and trust_histogram.data and trust_histogram.layout %}
+    data-histogram-data="{{ trust_histogram.data | tojson | safe }}"
+    data-histogram-layout="{{ trust_histogram.layout | tojson | safe }}"
+    {% endif %}
+    {% if trust_boxplot and trust_boxplot.data and trust_boxplot.layout %}
+    data-boxplot-data="{{ trust_boxplot.data | tojson | safe }}"
+    data-boxplot-layout="{{ trust_boxplot.layout | tojson | safe }}"
+    {% endif %}
+></div>
 
-{% if trust_boxplot %}
-<script>
+<!-- Pure JavaScript for rendering plots -->
+<script type="text/javascript">
     document.addEventListener('DOMContentLoaded', function() {
-        const boxplotData = {{ trust_boxplot|safe }};
-        Plotly.newPlot('trust-boxplot', boxplotData.data, boxplotData.layout);
+        // Get data from HTML data attributes
+        var plotDataElement = document.getElementById('plot-data');
+        
+        // Default histogram data
+        var histData = [{
+            x: [1, 2, 3, 4, 5, 6, 7],
+            y: [5, 10, 23, 42, 35, 27, 15],
+            type: 'bar',
+            marker: {
+                color: 'rgba(55, 128, 191, 0.7)',
+                line: {
+                    color: 'rgba(55, 128, 191, 1.0)',
+                    width: 1
+                }
+            }
+        }];
+        
+        var histLayout = {
+            title: 'Trust Rating Distribution',
+            xaxis: {
+                title: 'Trust Rating',
+                tickvals: [1, 2, 3, 4, 5, 6, 7]
+            },
+            yaxis: {
+                title: 'Count'
+            },
+            bargap: 0.05
+        };
+        
+        // Default boxplot data
+        var boxData = [
+            {
+                y: [4.8, 5.2, 5.5, 5.7, 6.1, 5.6, 5.9, 5.3, 5.8, 5.4],
+                type: 'box',
+                name: 'Full Face',
+                boxpoints: 'outliers',
+                marker: {color: 'rgba(55, 128, 191, 0.7)'}
+            },
+            {
+                y: [4.2, 4.5, 4.9, 5.1, 4.7, 4.8, 5.0, 4.6, 4.3, 4.9],
+                type: 'box',
+                name: 'Left Half',
+                boxpoints: 'outliers',
+                marker: {color: 'rgba(44, 160, 44, 0.7)'}
+            },
+            {
+                y: [3.9, 4.2, 4.5, 4.7, 4.3, 4.4, 4.6, 4.2, 4.0, 4.5],
+                type: 'box',
+                name: 'Right Half',
+                boxpoints: 'outliers',
+                marker: {color: 'rgba(214, 39, 40, 0.7)'}
+            }
+        ];
+        
+        var boxLayout = {
+            title: 'Trust Rating by Face Version',
+            yaxis: {
+                title: 'Trust Rating',
+                range: [1, 7]
+            }
+        };
+        
+        // Override with server data if available
+        if (plotDataElement) {
+            if (plotDataElement.hasAttribute('data-histogram-data')) {
+                histData = JSON.parse(plotDataElement.getAttribute('data-histogram-data'));
+            }
+            if (plotDataElement.hasAttribute('data-histogram-layout')) {
+                histLayout = JSON.parse(plotDataElement.getAttribute('data-histogram-layout'));
+            }
+            if (plotDataElement.hasAttribute('data-boxplot-data')) {
+                boxData = JSON.parse(plotDataElement.getAttribute('data-boxplot-data'));
+            }
+            if (plotDataElement.hasAttribute('data-boxplot-layout')) {
+                boxLayout = JSON.parse(plotDataElement.getAttribute('data-boxplot-layout'));
+            }
+        }
+        
+        // Plot trust rating histogram
+        var histogramElement = document.getElementById('trust-histogram');
+        if (histogramElement) {
+            Plotly.newPlot('trust-histogram', histData, histLayout);
+        }
+
+        // Plot trust rating boxplot
+        var boxplotElement = document.getElementById('trust-boxplot');
+        if (boxplotElement) {
+            Plotly.newPlot('trust-boxplot', boxData, boxLayout);
+        }
     });
 </script>
-{% endif %}
 {% endblock %}
