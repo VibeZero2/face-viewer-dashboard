@@ -56,12 +56,15 @@ def dashboard():
         columns=columns
     )
 
-@analytics_bp.route('/api/run_analysis', methods=['POST'])
+@analytics_bp.route('/api/run_analysis', methods=['GET', 'POST'])
 def run_analysis():
     """API endpoint to run statistical analysis"""
     # Get request data
-    data = request.json
-    analysis_type = data.get('analysis_type')
+    if request.method == 'POST':
+        data = request.json
+        analysis_type = data.get('analysis_type')
+    else:  # GET method
+        analysis_type = request.args.get('analysis_type', 'trust_by_face')
     
     # Mock analysis results
     results = {
@@ -99,13 +102,13 @@ def run_analysis():
     
     return jsonify(results)
 
-@analytics_bp.route('/api/export_data', methods=['POST'])
+@analytics_bp.route('/api/export_data', methods=['GET', 'POST'])
 def export_data():
     """API endpoint to export data in various formats"""
     # Mock export functionality
     return jsonify({'success': True, 'message': 'Export functionality will be implemented in production'})
 
-@analytics_bp.route('/api/export_spss', methods=['POST'])
+@analytics_bp.route('/api/export_spss', methods=['GET', 'POST'])
 def export_spss():
     """API endpoint to export data in SPSS format"""
     # Mock SPSS export functionality
