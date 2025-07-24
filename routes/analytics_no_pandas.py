@@ -66,6 +66,8 @@ def run_analysis():
     else:  # GET method
         analysis_type = request.args.get('analysis_type', 'trust_by_face')
     
+    # Always allow GET and POST methods - both are supported
+    
     # Mock analysis results
     results = {
         'success': True,

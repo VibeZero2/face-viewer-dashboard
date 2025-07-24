@@ -18,5 +18,6 @@ application = app
 app = application
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5001))
-    app.run(host='0.0.0.0', port=port, debug=os.environ.get('FLASK_ENV') == 'development')
+    # Run the app with debug mode enabled
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=True)
