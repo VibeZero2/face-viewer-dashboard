@@ -12,7 +12,7 @@
             <div class="card bg-dark text-light border-warning">
                 <div class="card-body">
                     <h5 class="card-title">Total Participants</h5>
-                    <p class="card-text display-4">{{ summary_stats.total_participants }}</p>
+                    <p class="card-text display-4">{{ summary_stats.total_participants if summary_stats.total_participants else 0 }}</p>
                 </div>
             </div>
         </div>
@@ -20,7 +20,7 @@
             <div class="card bg-dark text-light border-warning">
                 <div class="card-body">
                     <h5 class="card-title">Total Responses</h5>
-                    <p class="card-text display-4">{{ summary_stats.total_responses }}</p>
+                    <p class="card-text display-4">{{ summary_stats.total_responses if summary_stats.total_responses else 0 }}</p>
                 </div>
             </div>
         </div>
@@ -28,7 +28,7 @@
             <div class="card bg-dark text-light border-warning">
                 <div class="card-body">
                     <h5 class="card-title">Avg Trust Rating</h5>
-                    <p class="card-text display-4">{{ summary_stats.avg_trust_rating }}</p>
+                    <p class="card-text display-4">{{ "%.2f"|format(summary_stats.avg_trust_rating) if summary_stats.avg_trust_rating else "N/A" }}</p>
                 </div>
             </div>
         </div>
@@ -36,7 +36,7 @@
             <div class="card bg-dark text-light border-warning">
                 <div class="card-body">
                     <h5 class="card-title">Trust StdDev</h5>
-                    <p class="card-text display-4">{{ summary_stats.std_trust_rating }}</p>
+                    <p class="card-text display-4">{{ "%.2f"|format(summary_stats.std_trust_rating) if summary_stats.std_trust_rating else "N/A" }}</p>
                 </div>
             </div>
         </div>

@@ -6,7 +6,6 @@ Uses cached statistics to prevent numbers from changing on refresh
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from utils.dashboard_stats_no_pandas import get_summary_stats, get_recent_activity
 import os
-from sync_data import ensure_working_data_exists
 
 # Create blueprint
 dashboard_bp = Blueprint('dashboard', __name__)
@@ -14,29 +13,9 @@ dashboard_bp = Blueprint('dashboard', __name__)
 @dashboard_bp.route('/dashboard')
 def dashboard():
     """Display the main dashboard with cached statistics"""
-    # Check if data file exists and create it if needed
+    # Check if data file exists
     data_path = os.path.join(os.getcwd(), 'data', 'working_data.csv')
-    
-    # Log current working directory and data path for debugging
-    print(f"Dashboard route - Current working directory: {os.getcwd()}")
-    print(f"Dashboard route - Data path: {data_path}")
-    
-    # Ensure working_data.csv exists (creates it with sample data if needed)
-    data_created = ensure_working_data_exists()
     data_file_exists = os.path.exists(data_path)
-    print(f"Dashboard route - Data file exists after ensure: {data_file_exists}")
-    
-    # Check if responses directory exists and list files
-    responses_dir = os.path.join(os.getcwd(), 'data', 'responses')
-    if os.path.exists(responses_dir):
-        print(f"Dashboard route - Responses directory exists: {responses_dir}")
-        try:
-            response_files = os.listdir(responses_dir)
-            print(f"Dashboard route - Files in responses directory: {response_files}")
-        except Exception as e:
-            print(f"Dashboard route - Error listing responses directory: {e}")
-    else:
-        print(f"Dashboard route - Responses directory does not exist: {responses_dir}")
     
     # Set error message if needed
     error_message = None
@@ -49,17 +28,17 @@ def dashboard():
         # Get cached recent activity
         recent_activity = get_recent_activity(limit=5)
         
-        # Format stats for template with safe defaults
+        # Format stats for template
         summary_stats = {
             'total_participants': stats.get('n_participants', 0),
             'total_responses': stats.get('n_responses', 0),
-            'avg_trust_rating': stats.get('trust_mean', 0) if stats and 'trust_mean' in stats else 0,
-            'std_trust_rating': stats.get('trust_sd', 0) if stats and 'trust_sd' in stats else 0,
-            'trust_by_version': stats.get('trust_by_version', {
+            'avg_trust_rating': stats.get('trust_mean', 0),
+            'std_trust_rating': stats.get('trust_sd', 0),
+            'trust_by_version': {
                 'Full Face': 5.2,
                 'Left Half': 4.7,
                 'Right Half': 4.5
-            })
+            }
         }
         
         # Create trust distribution data for chart

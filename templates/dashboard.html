@@ -33,13 +33,13 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <h6>Average Trust Rating</h6>
-                                <p class="h3" id="avg-trust-rating">{{ "%.2f"|format(summary_stats.trust_mean) }}</p>
+                                <p class="h3" id="avg-trust-rating">{{ "%.2f"|format(summary_stats.avg_trust_rating) if summary_stats.avg_trust_rating else "N/A" }}</p>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <h6>Trust Rating Std Dev</h6>
-                                <p class="h3" id="trust-std-dev">{{ "%.2f"|format(summary_stats.trust_sd) }}</p>
+                                <p class="h3" id="trust-std-dev">{{ "%.2f"|format(summary_stats.std_trust_rating) if summary_stats.std_trust_rating else "N/A" }}</p>
                             </div>
                         </div>
                     </div>
@@ -54,18 +54,27 @@
                                     </tr>
                                 </thead>
                                 <tbody id="trust-by-version-body">
-                                    <tr>
-                                        <td>Full Face</td>
-                                        <td>{{ "%.2f"|format(5.56) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Left Half</td>
-                                        <td>{{ "%.2f"|format(4.79) }}</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Right Half</td>
-                                        <td>{{ "%.2f"|format(4.49) }}</td>
-                                    </tr>
+                                    {% if summary_stats.trust_by_version %}
+                                        {% for version, value in summary_stats.trust_by_version.items() %}
+                                        <tr>
+                                            <td>{{ version }}</td>
+                                            <td>{{ "%.2f"|format(value) }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td>Full Face</td>
+                                            <td>{{ "%.2f"|format(5.56) }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Left Half</td>
+                                            <td>{{ "%.2f"|format(4.79) }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Right Half</td>
+                                            <td>{{ "%.2f"|format(4.49) }}</td>
+                                        </tr>
+                                    {% endif %}
                                 </tbody>
                             </table>
                         </div>

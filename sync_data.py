@@ -27,8 +27,28 @@ TARGET_WORKING_DATA = os.path.join(TARGET_REPO, 'data', 'working_data.csv')
 
 def ensure_directories():
     """Ensure all required directories exist"""
+    # Create data directory if it doesn't exist
+    data_dir = os.path.join(TARGET_REPO, 'data')
+    os.makedirs(data_dir, exist_ok=True)
+    print(f"Ensured data directory exists: {data_dir}")
+    
+    # Create responses directory if it doesn't exist
     os.makedirs(TARGET_DATA_DIR, exist_ok=True)
-    print(f"Ensured target directory exists: {TARGET_DATA_DIR}")
+    print(f"Ensured responses directory exists: {TARGET_DATA_DIR}")
+    
+    # Create .gitkeep files to ensure directories are tracked in git
+    gitkeep_data = os.path.join(data_dir, '.gitkeep')
+    gitkeep_responses = os.path.join(TARGET_DATA_DIR, '.gitkeep')
+    
+    if not os.path.exists(gitkeep_data):
+        with open(gitkeep_data, 'w') as f:
+            f.write('')
+        print(f"Created .gitkeep in data directory")
+        
+    if not os.path.exists(gitkeep_responses):
+        with open(gitkeep_responses, 'w') as f:
+            f.write('')
+        print(f"Created .gitkeep in responses directory")
 
 def sync_response_files():
     """Copy all response files from source to target"""
@@ -142,6 +162,29 @@ def combine_response_files():
     
     print(f"Combined {len(all_data)} rows from {len(glob.glob(os.path.join(TARGET_DATA_DIR, '*.csv')))} files into {TARGET_WORKING_DATA}")
     return len(all_data)
+
+def ensure_working_data_exists():
+    """Function to be called at runtime to ensure working_data.csv exists"""
+    # Ensure directories exist
+    ensure_directories()
+    
+    # Check if working_data.csv exists
+    if not os.path.exists(TARGET_WORKING_DATA):
+        print(f"Working data file not found at {TARGET_WORKING_DATA}")
+        print(f"Attempting to create from available response files...")
+        
+        # Try to combine existing response files
+        row_count = combine_response_files()
+        
+        if row_count == 0:
+            # If no response files found, create sample data
+            print("No response files found. Creating sample data...")
+            create_sample_data()
+            row_count = combine_response_files()
+            
+        return row_count > 0
+    
+    return True
 
 def main():
     """Main function to sync and combine data"""
