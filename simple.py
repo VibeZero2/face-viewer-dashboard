@@ -12,6 +12,7 @@ from routes.analytics_no_pandas import analytics_bp
 from routes.export_no_pandas import export_bp
 from routes.participants_no_pandas import participants_bp
 from routes.api import api_bp
+from routes.admin_tools import admin_tools
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -23,6 +24,7 @@ app.register_blueprint(analytics_bp)
 app.register_blueprint(export_bp)
 app.register_blueprint(participants_bp)
 app.register_blueprint(api_bp)
+app.register_blueprint(admin_tools)
 
 @app.route('/')
 def index():

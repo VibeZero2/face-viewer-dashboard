@@ -105,6 +105,53 @@
     </div>
 </div>
 
+<!-- Admin Tools Section -->
+<div class="card mt-4 mb-4">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span>Admin Tools</span>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#adminTools">
+            Toggle Admin Panel
+        </button>
+    </div>
+    <div class="collapse" id="adminTools">
+        <div class="card-body">
+            <div class="row">
+                <!-- Upload Participant CSV -->
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">Upload Participant CSV</div>
+                        <div class="card-body">
+                            <form action="{{ url_for('admin_tools.upload_participant') }}" method="post" enctype="multipart/form-data" class="mb-0">
+                                <div class="mb-3">
+                                    <label for="file" class="form-label">Select CSV file:</label>
+                                    <input type="file" name="file" id="file" class="form-control" accept=".csv" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Upload</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Clear All Data -->
+                <div class="col-md-6">
+                    <div class="card mb-3">
+                        <div class="card-header bg-light">Clear All Participant Data</div>
+                        <div class="card-body">
+                            <form action="{{ url_for('admin_tools.clear_all_data') }}" method="post" class="mb-0">
+                                <div class="mb-3">
+                                    <label for="confirmation" class="form-label">Type <strong>DELETE_ALL_DATA</strong> to confirm:</label>
+                                    <input type="text" name="confirmation" id="confirmation" class="form-control" required>
+                                </div>
+                                <button type="submit" class="btn btn-danger">Clear All Data</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="card mt-4">
     <div class="card-header bg-white">Participants</div>
     <div class="card-body table-responsive">
@@ -112,8 +159,9 @@
             <thead>
                 <tr>
                     <th>Participant ID</th>
-                    <th>Files</th>
+                    <th>Responses</th>
                     <th>Actions</th>
+                    <th>Admin</th>
                 </tr>
             </thead>
             <tbody>
@@ -128,6 +176,13 @@
                     <td>
                         {% if p.csv %}<a href="{{ p.csv }}" class="btn btn-outline-primary btn-sm">View</a>{% endif %}
                         {% if p.csv %}<a href="{{ p.csv }}" download class="btn btn-outline-secondary btn-sm">Download</a>{% endif %}
+                    </td>
+                    <td>
+                        {% if p.filename %}
+                        <form action="{{ url_for('admin_tools.delete_participant', filename=p.filename) }}" method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure you want to delete this participant data?');">❌ Delete</button>
+                        </form>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
