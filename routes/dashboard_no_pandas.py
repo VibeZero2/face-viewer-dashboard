@@ -6,9 +6,62 @@ Uses cached statistics to prevent numbers from changing on refresh
 from flask import Blueprint, render_template
 import os
 import pandas as pd
+import logging
+import csv
+from datetime import datetime
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 
 # Create blueprint
 dashboard_bp = Blueprint('dashboard', __name__)
+
+def auto_generate_working_data():
+    """Generate working_data.csv from response files if it doesn't exist"""
+    working_data_path = os.path.join(os.getcwd(), 'data', 'working_data.csv')
+    responses_dir = os.path.join(os.getcwd(), 'data', 'responses')
+    
+    # Only generate if working_data.csv doesn't exist but responses directory does
+    if not os.path.exists(working_data_path) and os.path.exists(responses_dir):
+        logging.info("Auto-generating working_data.csv from response files")
+        
+        # Check if there are any CSV files in the responses directory
+        csv_files = [f for f in os.listdir(responses_dir) if f.endswith('.csv')]
+        if not csv_files:
+            logging.warning("No response files found in data/responses directory")
+            return False
+        
+        try:
+            # Read all response files and combine them
+            all_rows = []
+            fieldnames = None
+            
+            for csv_file in csv_files:
+                file_path = os.path.join(responses_dir, csv_file)
+                with open(file_path, 'r', newline='') as f:
+                    reader = csv.DictReader(f)
+                    if fieldnames is None:
+                        fieldnames = reader.fieldnames
+                    for row in reader:
+                        all_rows.append(row)
+            
+            # Write the combined data to working_data.csv
+            if all_rows and fieldnames:
+                with open(working_data_path, 'w', newline='') as f:
+                    writer = csv.DictWriter(f, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerows(all_rows)
+                logging.info(f"Successfully generated {working_data_path} with {len(all_rows)} rows")
+                return True
+            else:
+                logging.warning("No data found in response files")
+                return False
+                
+        except Exception as e:
+            logging.error(f"Error generating working_data.csv: {e}")
+            return False
+    
+    return os.path.exists(working_data_path)
 
 @dashboard_bp.route('/dashboard')
 def dashboard():
@@ -28,6 +81,9 @@ def dashboard():
     participants = []
 
     try:
+        # Auto-generate working_data.csv if needed
+        auto_generate_working_data()
+        
         # Attempt to load working_data.csv
         data_path = os.path.join(os.getcwd(), 'data', 'working_data.csv')
         if os.path.exists(data_path):
@@ -141,6 +197,12 @@ def dashboard():
         "masculinity_left": masculinity_left,
         "masculinity_right": masculinity_right
     }
+    
+    # Log debug information
+    logging.info(f"Found participants: {participants}")
+    logging.info(f"Stats: {stats}")
+    logging.info(f"Chart data: {chart_data}")
+    logging.info(f"Data file exists: {data_file_exists}")
     
     # Render dashboard template
     return render_template(
