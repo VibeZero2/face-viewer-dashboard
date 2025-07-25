@@ -1,106 +1,181 @@
 // Dashboard JavaScript functionality
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Theme toggle functionality
-    const themeToggle = document.getElementById('theme-toggle');
-    const body = document.body;
+    // Initialize Chart.js charts
+    initializeDashboardCharts();
     
-    // Check for saved theme preference
-    const savedTheme = localStorage.getItem('dashboard-theme');
-    if (savedTheme === 'dark') {
-        body.classList.add('dark-theme');
-        updateThemeIcon(true);
-    }
-    
-    // Theme toggle event listener
-    if (themeToggle) {
-        themeToggle.addEventListener('click', function() {
-            const isDarkTheme = body.classList.toggle('dark-theme');
-            localStorage.setItem('dashboard-theme', isDarkTheme ? 'dark' : 'light');
-            updateThemeIcon(isDarkTheme);
-            
-            // Update Plotly charts if they exist
-            updatePlotlyTheme(isDarkTheme);
-        });
-    }
-    
-    // Update theme icon based on current theme
-    function updateThemeIcon(isDarkTheme) {
-        if (themeToggle) {
-            themeToggle.innerHTML = isDarkTheme ? 
-                '<i class="fas fa-sun"></i>' : 
-                '<i class="fas fa-moon"></i>';
-        }
-    }
-    
-    // Update Plotly charts theme
-    function updatePlotlyTheme(isDarkTheme) {
-        const plotlyDivs = document.querySelectorAll('[id^="plotly-"]');
+    // Fetch dashboard data
+    fetchDashboardData();
+});
+
+// Function to initialize dashboard charts
+function initializeDashboardCharts() {
+    // Trust Rating Distribution Chart
+    const trustChartCtx = document.getElementById('trustChart');
+    if (trustChartCtx) {
+        // Default data - will be replaced with actual data from API
+        const trustData = {
+            labels: ['1', '2', '3', '4', '5', '6', '7'],
+            datasets: [{
+                label: 'Trust Ratings',
+                data: [5, 10, 15, 25, 20, 15, 10],
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        };
         
-        plotlyDivs.forEach(div => {
-            if (div._fullData) {
-                const newLayout = {
-                    paper_bgcolor: isDarkTheme ? '#2c3034' : '#ffffff',
-                    plot_bgcolor: isDarkTheme ? '#2c3034' : '#ffffff',
-                    font: {
-                        color: isDarkTheme ? '#f8f9fa' : '#212529'
+        const trustChart = new Chart(trustChartCtx, {
+            type: 'bar',
+            data: trustData,
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Count'
+                        }
                     },
-                    xaxis: {
-                        gridcolor: isDarkTheme ? '#495057' : '#e9ecef'
-                    },
-                    yaxis: {
-                        gridcolor: isDarkTheme ? '#495057' : '#e9ecef'
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Trust Rating'
+                        }
                     }
-                };
-                
-                Plotly.relayout(div.id, newLayout);
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    title: {
+                        display: false,
+                        text: 'Trust Rating Distribution'
+                    }
+                }
             }
         });
+        
+        // Store chart instance in window for later updates
+        window.trustChart = trustChart;
     }
     
-    // Show loading overlay during AJAX requests
-    const loadingOverlay = document.getElementById('loading-overlay');
-    
-    if (loadingOverlay) {
-        // Show loading overlay before AJAX request
-        document.addEventListener('ajax:before', function() {
-            loadingOverlay.classList.add('show');
+    // Masculinity Scores Chart
+    const masculinityChartCtx = document.getElementById('masculinityChart');
+    if (masculinityChartCtx) {
+        // Default data - will be replaced with actual data from API
+        const masculinityData = {
+            labels: ['Full Face', 'Left Half', 'Right Half'],
+            datasets: [{
+                label: 'Avg. Masculinity Score',
+                data: [4.8, 4.2, 3.9],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.6)',
+                    'rgba(75, 192, 192, 0.6)',
+                    'rgba(255, 159, 64, 0.6)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderWidth: 1
+            }]
+        };
+        
+        const masculinityChart = new Chart(masculinityChartCtx, {
+            type: 'bar',
+            data: masculinityData,
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: 7,
+                        title: {
+                            display: true,
+                            text: 'Average Score'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    title: {
+                        display: false,
+                        text: 'Masculinity Scores by Face Version'
+                    }
+                }
+            }
         });
         
-        // Hide loading overlay after AJAX request
-        document.addEventListener('ajax:complete', function() {
-            loadingOverlay.classList.remove('show');
+        // Store chart instance in window for later updates
+        window.masculinityChart = masculinityChart;
+    }
+}
+
+// Function to fetch dashboard data from API
+function fetchDashboardData() {
+    fetch('/api/dashboard/stats')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            updateDashboardUI(data);
+        })
+        .catch(error => {
+            console.error('Error fetching dashboard data:', error);
         });
+}
+
+// Function to update dashboard UI with data
+function updateDashboardUI(data) {
+    // Update stats cards
+    if (data.total_participants !== undefined) {
+        document.querySelector('.bg-warning .card-text').textContent = data.total_participants;
     }
     
-    // Initialize tooltips
-    const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-    tooltips.forEach(tooltip => {
-        new bootstrap.Tooltip(tooltip);
-    });
-    
-    // Initialize popovers
-    const popovers = document.querySelectorAll('[data-bs-toggle="popover"]');
-    popovers.forEach(popover => {
-        new bootstrap.Popover(popover);
-    });
-    
-    // Data table initialization
-    const dataTables = document.querySelectorAll('.data-table');
-    dataTables.forEach(table => {
-        if (typeof $.fn.DataTable !== 'undefined') {
-            $(table).DataTable({
-                responsive: true,
-                pageLength: 25
-            });
-        }
-    });
-    
-    // Apply dark theme to Plotly charts if dark theme is active
-    if (body.classList.contains('dark-theme')) {
-        updatePlotlyTheme(true);
+    if (data.total_responses !== undefined) {
+        document.querySelector('.bg-primary .card-text').textContent = data.total_responses;
     }
-});
+    
+    if (data.trust_mean !== undefined) {
+        document.querySelector('.bg-success .card-text').textContent = 
+            typeof data.trust_mean === 'number' ? data.trust_mean.toFixed(2) : data.trust_mean;
+    }
+    
+    if (data.trust_std !== undefined) {
+        document.querySelector('.bg-danger .card-text').textContent = 
+            typeof data.trust_std === 'number' ? data.trust_std.toFixed(2) : data.trust_std;
+    }
+    
+    // Update trust chart if data is available
+    if (data.trust_distribution && window.trustChart) {
+        const labels = Object.keys(data.trust_distribution);
+        const values = Object.values(data.trust_distribution);
+        
+        window.trustChart.data.labels = labels;
+        window.trustChart.data.datasets[0].data = values;
+        window.trustChart.update();
+    }
+    
+    // Update masculinity chart if data is available
+    if (data.masculinity_by_version && window.masculinityChart) {
+        const labels = Object.keys(data.masculinity_by_version);
+        const values = Object.values(data.masculinity_by_version);
+        
+        window.masculinityChart.data.labels = labels;
+        window.masculinityChart.data.datasets[0].data = values;
+        window.masculinityChart.update();
+    }
+}
 
 // Function to download data as CSV
 function downloadCSV(csvContent, fileName) {
@@ -115,7 +190,6 @@ function downloadCSV(csvContent, fileName) {
 
 // Function to show confirmation dialog
 function confirmAction(message, callback) {
-    // If callback is provided, use it, otherwise just return the confirmation result
     if (callback) {
         if (confirm(message)) {
             callback();
@@ -130,27 +204,4 @@ function confirmAction(message, callback) {
 function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-}
-
-// Function to show notification
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type} alert-dismissible fade show notification`;
-    notification.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    `;
-    
-    const notificationContainer = document.getElementById('notification-container');
-    if (notificationContainer) {
-        notificationContainer.appendChild(notification);
-        
-        // Auto-dismiss after 5 seconds
-        setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => {
-                notification.remove();
-            }, 300);
-        }, 5000);
-    }
 }
