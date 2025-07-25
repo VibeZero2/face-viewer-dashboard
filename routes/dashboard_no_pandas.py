@@ -5,7 +5,8 @@ Uses fresh statistics from data/responses/ directory
 
 from flask import Blueprint, render_template
 import os
-import pandas as pd
+import csv
+import statistics
 import logging
 
 # Configure logging
@@ -36,6 +37,10 @@ def dashboard():
         # Read directly from data/responses directory
         responses_dir = os.path.join(os.getcwd(), 'data', 'responses')
         all_data = []
+        trust_scores = []
+        trust_by_version = {"Full Face": [], "Left Half": [], "Right Half": []}
+        participant_ids = set()
+        total_rows = 0
         
         if os.path.exists(responses_dir):
             csv_files = [f for f in os.listdir(responses_dir) if f.endswith('.csv')]
@@ -44,47 +49,73 @@ def dashboard():
             for filename in csv_files:
                 file_path = os.path.join(responses_dir, filename)
                 try:
-                    df = pd.read_csv(file_path)
-                    all_data.append(df)
-                    logger.info(f"Successfully loaded {filename} with {len(df)} rows")
+                    # Extract participant ID from filename
+                    participant_id = filename.replace('.csv', '')
+                    participant_ids.add(participant_id)
+                    
+                    # Read CSV file using built-in csv module
+                    with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
+                        reader = csv.DictReader(csvfile)
+                        file_rows = []
+                        for row in reader:
+                            file_rows.append(row)
+                            total_rows += 1
+                            
+                            # Extract trust scores if available
+                            if 'Trust' in row and row['Trust']:
+                                try:
+                                    trust_value = float(row['Trust'])
+                                    trust_scores.append(trust_value)
+                                    
+                                    # Group by face version if available
+                                    if 'FaceVersion' in row and row['FaceVersion']:
+                                        face_version = row['FaceVersion']
+                                        if face_version == 'Full Face' and face_version in trust_by_version:
+                                            trust_by_version['Full Face'].append(trust_value)
+                                        elif face_version == 'Left Half' and face_version in trust_by_version:
+                                            trust_by_version['Left Half'].append(trust_value)
+                                        elif face_version == 'Right Half' and face_version in trust_by_version:
+                                            trust_by_version['Right Half'].append(trust_value)
+                                except (ValueError, TypeError):
+                                    pass
+                        
+                        all_data.append(file_rows)
+                    logger.info(f"Successfully loaded {filename} with {len(file_rows)} rows")
                 except Exception as e:
                     logger.error(f"Skipping {filename} due to error: {e}")
                     continue
         
-        if all_data:
-            # Combine all dataframes
-            combined = pd.concat(all_data, ignore_index=True)
-            logger.info(f"Combined {len(all_data)} dataframes with total {len(combined)} rows")
-            
-            # Calculate trust statistics if Trust column exists
-            if "Trust" in combined.columns:
-                stats["trust_mean"] = round(combined["Trust"].mean(), 2)
-                stats["trust_std"] = round(combined["Trust"].std(), 2)
-                stats["total_responses"] = len(combined)
-                logger.info(f"Calculated trust stats: mean={stats['trust_mean']}, std={stats['trust_std']}, responses={stats['total_responses']}")
-            
-            # Calculate participant count if ParticipantID column exists
-            if "ParticipantID" in combined.columns:
-                stats["total_participants"] = combined["ParticipantID"].nunique()
-                logger.info(f"Found {stats['total_participants']} unique participants")
-            else:
-                # If no ParticipantID column, use the number of CSV files as participant count
-                stats["total_participants"] = len(all_data)
-                logger.info(f"No ParticipantID column, using file count: {stats['total_participants']}")
-            
-            # Calculate trust by face version if FaceVersion column exists
-            if "FaceVersion" in combined.columns and "Trust" in combined.columns:
-                # Group by face version and calculate mean trust
-                version_groups = combined.groupby("FaceVersion")["Trust"].mean()
-                logger.info(f"Found face versions: {list(version_groups.index)}")
+        # Calculate statistics from collected data
+        if trust_scores:
+            try:
+                stats["trust_mean"] = round(sum(trust_scores) / len(trust_scores), 2)
                 
-                # Update stats with actual data
-                if "Full Face" in version_groups:
-                    stats["trust_by_version"]["Full_Face"] = round(version_groups["Full Face"], 2)
-                if "Left Half" in version_groups:
-                    stats["trust_by_version"]["Left_Half"] = round(version_groups["Left Half"], 2)
-                if "Right Half" in version_groups:
-                    stats["trust_by_version"]["Right_Half"] = round(version_groups["Right Half"], 2)
+                # Calculate standard deviation if we have more than one value
+                if len(trust_scores) > 1:
+                    mean = sum(trust_scores) / len(trust_scores)
+                    variance = sum((x - mean) ** 2 for x in trust_scores) / len(trust_scores)
+                    stats["trust_std"] = round((variance ** 0.5), 2)
+                else:
+                    stats["trust_std"] = 0.0
+                    
+                stats["total_responses"] = len(trust_scores)
+                logger.info(f"Calculated trust stats: mean={stats['trust_mean']}, std={stats['trust_std']}, responses={stats['total_responses']}")
+            except Exception as e:
+                logger.error(f"Error calculating trust statistics: {e}")
+        
+        # Set participant count
+        stats["total_participants"] = len(participant_ids)
+        logger.info(f"Found {stats['total_participants']} unique participants")
+        
+        # Calculate average trust by face version
+        for version, scores in trust_by_version.items():
+            if scores:
+                key = version.replace(' ', '_')
+                try:
+                    stats["trust_by_version"][key] = round(sum(scores) / len(scores), 2)
+                    logger.info(f"Calculated {version} trust: {stats['trust_by_version'][key]} from {len(scores)} scores")
+                except Exception as e:
+                    logger.error(f"Error calculating {version} trust: {e}")
             
             # Create trust distribution data
             trust_distribution_data = [0, 0, 0, 0, 0, 0, 0]  # Default empty data for 7 bins
@@ -236,9 +267,13 @@ def dashboard():
     }
     
     # Determine if we're using demo data
-    data_file_exists = len(all_data) > 0
+    data_file_exists = total_rows > 0
     use_demo_data = os.environ.get('USE_DEMO_DATA', 'False').lower() == 'true' or not data_file_exists
     error_message = None if data_file_exists else "No data found in responses directory. Using demo data."
+    
+    # Disable sample data generation in production
+    if os.environ.get('ENVIRONMENT', '').lower() == 'production':
+        use_demo_data = False
     
     logger.info(f"Rendering dashboard with {len(participants)} participants, {stats['total_responses']} responses")
     
