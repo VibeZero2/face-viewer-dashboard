@@ -1,0 +1,73 @@
+/* Custom CSS for Face Viewer Dashboard */
+
+/* General styling */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.card {
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #eee;
+    font-weight: 600;
+}
+
+/* Dashboard specific styling */
+.stats-card {
+    text-align: center;
+    padding: 15px;
+}
+
+.stats-card .value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #0d6efd;
+}
+
+.stats-card .label {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+/* Table styling */
+.table-responsive {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table th {
+    background-color: #f8f9fa;
+    border-top: none;
+}
+
+/* Chart containers */
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+/* Analytics page styling */
+.analysis-options .btn {
+    margin-right: 10px;
+    margin-bottom: 10px;
+}
+
+.analysis-result {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .stats-card .value {
+        font-size: 1.5rem;
+    }
+}
