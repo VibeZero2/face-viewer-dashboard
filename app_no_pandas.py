@@ -38,11 +38,13 @@ from routes.dashboard_no_pandas import dashboard_bp
 from routes.backups_no_pandas import backups_bp
 from routes.export_no_pandas import export_bp
 from routes.analytics_no_pandas import analytics_bp
+from routes.admin_tools import admin_tools
 app.register_blueprint(participants_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(backups_bp)
 app.register_blueprint(export_bp)
 app.register_blueprint(analytics_bp)
+app.register_blueprint(admin_tools)
 
 # Define routes
 @app.route('/')
