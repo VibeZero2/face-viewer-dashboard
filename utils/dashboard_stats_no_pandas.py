@@ -10,72 +10,105 @@ from utils.cache import cached
 
 def load_data():
     """
-    Load participant data from CSV without pandas
-    Handles both standard CSV and malformed CSV with fields on separate lines
+    Load participant data from CSV files in the data/responses directory
     
     Returns:
         List of dictionaries containing participant data
     """
+    all_data = []
+    
     try:
-        # Check if data file exists
-        data_path = os.path.join(os.getcwd(), 'data', 'working_data.csv')
-        if not os.path.exists(data_path):
-            print(f"Data file not found at {data_path}")
+        # Check if responses directory exists
+        responses_dir = os.path.join(os.getcwd(), 'data', 'responses')
+        if not os.path.exists(responses_dir):
+            print(f"Responses directory not found at {responses_dir}")
+            # Ensure directory exists
+            os.makedirs(responses_dir, exist_ok=True)
+            print(f"Created responses directory at {responses_dir}")
             # Return empty list if no data exists
             return []
         
-        print(f"Loading data from {data_path}")
-        # First try standard CSV format
-        try:
-            with open(data_path, 'r', newline='', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                data = list(reader)
-                if data and len(data) > 0:
-                    print(f"Successfully loaded {len(data)} rows from CSV")
-                    return data
-        except Exception as csv_error:
-            print(f"Standard CSV reading failed: {csv_error}")
+        # Get list of CSV files in responses directory
+        csv_files = [f for f in os.listdir(responses_dir) if f.endswith('.csv')]
+        if not csv_files:
+            print(f"No CSV files found in {responses_dir}")
+            return []
         
-        # If standard CSV reading fails, try handling malformed CSV with fields on separate lines
-        try:
-            with open(data_path, 'r', encoding='utf-8') as f:
-                lines = f.readlines()
-            
-            # Check if this might be a malformed CSV with fields on separate lines
-            if len(lines) > 0 and ',' not in lines[0]:
-                # Extract header fields
-                headers = []
-                data_rows = []
-                current_row = {}
-                header_index = 0
+        print(f"Found {len(csv_files)} CSV files in {responses_dir}")
+        
+        # Process each CSV file
+        for filename in csv_files:
+            file_path = os.path.join(responses_dir, filename)
+            try:
+                # Extract participant ID from filename
+                participant_id = filename.replace('.csv', '')
                 
-                for i, line in enumerate(lines):
-                    line = line.strip()
-                    if not line:
-                        continue
-                    
-                    if i < 7:  # Assuming the first 7 non-empty lines are headers
-                        headers.append(line)
-                    else:
-                        field_index = (i - 7) % len(headers)
-                        if field_index == 0 and i > 7:
-                            # Start a new row
-                            data_rows.append(current_row)
-                            current_row = {}
+                # Read CSV file using standard format
+                try:
+                    with open(file_path, 'r', newline='', encoding='utf-8') as f:
+                        reader = csv.DictReader(f)
+                        file_data = list(reader)
                         
-                        current_row[headers[field_index]] = line
+                        # Add participant ID if not present
+                        for row in file_data:
+                            if not row.get('participant_id') and not row.get('pid'):
+                                row['participant_id'] = participant_id
+                        
+                        all_data.extend(file_data)
+                    print(f"Successfully loaded {len(file_data)} rows from {filename}")
+                    continue
+                except Exception as csv_error:
+                    print(f"Standard CSV reading failed for {filename}: {csv_error}")
                 
-                # Don't forget to add the last row
-                if current_row:
-                    data_rows.append(current_row)
-                
-                print(f"Processed {len(data_rows)} rows from malformed CSV")
-                return data_rows
-        except Exception as malformed_error:
-            print(f"Malformed CSV handling failed: {malformed_error}")
+                # If standard CSV reading fails, try handling malformed CSV
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        lines = f.readlines()
+                    
+                    # Check if this might be a malformed CSV with fields on separate lines
+                    if len(lines) > 0 and ',' not in lines[0]:
+                        # Extract header fields
+                        headers = []
+                        data_rows = []
+                        current_row = {}
+                        
+                        for i, line in enumerate(lines):
+                            line = line.strip()
+                            if not line:
+                                continue
+                            
+                            if i < 7:  # Assuming the first 7 non-empty lines are headers
+                                headers.append(line)
+                            else:
+                                field_index = (i - 7) % len(headers)
+                                if field_index == 0 and i > 7:
+                                    # Start a new row
+                                    if not current_row.get('participant_id') and not current_row.get('pid'):
+                                        current_row['participant_id'] = participant_id
+                                    data_rows.append(current_row)
+                                    current_row = {}
+                                
+                                current_row[headers[field_index]] = line
+                        
+                        # Don't forget to add the last row
+                        if current_row:
+                            if not current_row.get('participant_id') and not current_row.get('pid'):
+                                current_row['participant_id'] = participant_id
+                            data_rows.append(current_row)
+                        
+                        all_data.extend(data_rows)
+                        print(f"Processed {len(data_rows)} rows from malformed CSV {filename}")
+                        continue
+                except Exception as malformed_error:
+                    print(f"Malformed CSV handling failed for {filename}: {malformed_error}")
+            
+            except Exception as file_error:
+                print(f"Error processing {filename}: {file_error}")
+                continue
         
-        # If all attempts fail, return empty list
-        return []
+        print(f"Total data loaded: {len(all_data)} rows from {len(csv_files)} files")
+        return all_data
+    
     except Exception as e:
         print(f"Error loading data: {e}")
         return []
