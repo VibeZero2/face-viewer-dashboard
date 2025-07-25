@@ -28,13 +28,13 @@ def load_data():
             # Return empty list if no data exists
             return []
         
-        # Get list of CSV files in responses directory
-        csv_files = [f for f in os.listdir(responses_dir) if f.endswith('.csv')]
+        # Get list of CSV files in responses directory - filter out sample files
+        csv_files = [f for f in os.listdir(responses_dir) if f.endswith('.csv') and not f.startswith('sample_')]
         if not csv_files:
-            print(f"No CSV files found in {responses_dir}")
+            print(f"No real participant CSV files found in {responses_dir}")
             return []
         
-        print(f"Found {len(csv_files)} CSV files in {responses_dir}")
+        print(f"Found {len(csv_files)} real participant CSV files in {responses_dir}")
         
         # Process each CSV file
         for filename in csv_files:

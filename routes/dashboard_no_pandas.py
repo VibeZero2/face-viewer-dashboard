@@ -43,8 +43,9 @@ def dashboard():
         total_rows = 0
         
         if os.path.exists(responses_dir):
-            csv_files = [f for f in os.listdir(responses_dir) if f.endswith('.csv')]
-            logger.info(f"Found {len(csv_files)} CSV files in {responses_dir}")
+            # Only include real participant files (not sample_*)
+            csv_files = [f for f in os.listdir(responses_dir) if f.endswith('.csv') and not f.startswith('sample_')]
+            logger.info(f"Found {len(csv_files)} real participant CSV files in {responses_dir}")
             
             for filename in csv_files:
                 file_path = os.path.join(responses_dir, filename)
@@ -158,11 +159,11 @@ def dashboard():
     except Exception as e:
         logger.error(f"Dashboard data load error: {e}")
 
-    # Participant file listing
+    # Participant file listing - only include real participants (not sample_*)
     responses_dir = os.path.join(os.getcwd(), 'data', 'responses')
     if os.path.exists(responses_dir):
         for filename in os.listdir(responses_dir):
-            if filename.endswith(".csv"):
+            if filename.endswith(".csv") and not filename.startswith("sample_"):
                 pid = filename.replace(".csv", "")
                 participants.append({
                     "id": pid,
@@ -172,15 +173,8 @@ def dashboard():
                 })
                 logger.info(f"Added participant: {pid}")
     
-    # Ensure we have at least one participant for demo purposes
-    if not participants:
-        participants.append({
-            "id": "P001",
-            "csv": "#",
-            "xlsx": None,
-            "enc": None
-        })
-        logger.info("Added demo participant")
+    # No demo participants in production
+    logger.info(f"Found {len(participants)} real participants")
 
     # Format stats for template
     summary_stats = {
@@ -216,24 +210,24 @@ def dashboard():
         }
     }
     
-    # Create trust boxplot data
+    # Create trust boxplot data - use real data or empty arrays
     trust_boxplot = {
         'data': [
             {
                 'type': 'box',
-                'y': [4.5, 5.2, 6.1, 5.8, 5.5, 4.9, 5.3, 5.7, 6.2, 5.0],
+                'y': trust_by_version.get('Full Face', []),
                 'name': 'Full Face',
                 'marker': {'color': '#3366cc'}
             },
             {
                 'type': 'box',
-                'y': [4.2, 4.8, 5.1, 4.5, 4.9, 4.3, 5.0, 4.7, 4.6, 4.4],
+                'y': trust_by_version.get('Left Half', []),
                 'name': 'Left Half',
                 'marker': {'color': '#dc3912'}
             },
             {
                 'type': 'box',
-                'y': [4.0, 4.5, 4.8, 4.3, 4.7, 4.1, 4.9, 4.6, 4.4, 4.2],
+                'y': trust_by_version.get('Right Half', []),
                 'name': 'Right Half',
                 'marker': {'color': '#ff9900'}
             }
@@ -246,14 +240,12 @@ def dashboard():
         }
     }
     
-    # Create trust histogram data
+    # Create trust histogram data - use real data
     trust_histogram = {
         'data': [
             {
                 'type': 'histogram',
-                'x': [4.5, 5.2, 6.1, 5.8, 5.5, 4.9, 5.3, 5.7, 6.2, 5.0, 
-                      4.2, 4.8, 5.1, 4.5, 4.9, 4.3, 5.0, 4.7, 4.6, 4.4,
-                      4.0, 4.5, 4.8, 4.3, 4.7, 4.1, 4.9, 4.6, 4.4, 4.2],
+                'x': trust_scores,
                 'marker': {'color': '#3366cc'}
             }
         ],
@@ -266,14 +258,10 @@ def dashboard():
         }
     }
     
-    # Determine if we're using demo data
+    # Never use demo data
     data_file_exists = total_rows > 0
-    use_demo_data = os.environ.get('USE_DEMO_DATA', 'False').lower() == 'true' or not data_file_exists
-    error_message = None if data_file_exists else "No data found in responses directory. Using demo data."
-    
-    # Disable sample data generation in production
-    if os.environ.get('ENVIRONMENT', '').lower() == 'production':
-        use_demo_data = False
+    use_demo_data = False
+    error_message = None if data_file_exists else "No participant data found in responses directory. Please add participant data files."
     
     logger.info(f"Rendering dashboard with {len(participants)} participants, {stats['total_responses']} responses")
     
