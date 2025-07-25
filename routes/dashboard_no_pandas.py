@@ -10,34 +10,16 @@ import os
 # Create blueprint
 dashboard_bp = Blueprint('dashboard', __name__)
 
-@dashboard_bp.route('/api/dashboard/stats')
-def dashboard_stats_api():
-    """API endpoint to get fresh dashboard statistics"""
-    # Clear cache to ensure fresh data is loaded
-    from utils.cache import clear_cache
-    from flask import jsonify
-    
-    clear_cache()
-    
-    # Get fresh statistics
-    stats = get_summary_stats()
-    
-    # Return as JSON
-    return jsonify(stats)
-
 @dashboard_bp.route('/dashboard')
 def dashboard():
     """Display the main dashboard with cached statistics"""
-    # Always use real data, never show warnings
+    # Check if data file exists
     data_path = os.path.join(os.getcwd(), 'data', 'working_data.csv')
-    # Force these values to ensure no warnings appear
-    data_file_exists = True
-    use_demo_data = False
-    error_message = None
+    data_file_exists = os.path.exists(data_path)
     
-    # Clear cache to ensure fresh data is loaded
-    from utils.cache import clear_cache
-    clear_cache()
+    # Set error message if needed
+    error_message = None
+    use_demo_data = os.environ.get('USE_DEMO_DATA', 'False').lower() == 'true' or not data_file_exists
     
     try:
         # Get cached summary statistics
@@ -51,13 +33,11 @@ def dashboard():
             'total_participants': stats.get('n_participants', 0),
             'total_responses': stats.get('n_responses', 0),
             'avg_trust_rating': stats.get('trust_mean', 0),
-            'trust_mean': stats.get('trust_mean', 0),  # Add this for template compatibility
             'std_trust_rating': stats.get('trust_sd', 0),
-            'trust_sd': stats.get('trust_sd', 0),  # Add this for template compatibility
             'trust_by_version': {
-                'Full Face': 5.56,  # From real data analysis
-                'Left Half': 4.79,  # From real data analysis
-                'Right Half': 4.49  # From real data analysis
+                'Full Face': 5.2,
+                'Left Half': 4.7,
+                'Right Half': 4.5
             }
         }
         
@@ -67,7 +47,7 @@ def dashboard():
                 {
                     'type': 'bar',
                     'x': ['Full Face', 'Left Half', 'Right Half'],
-                    'y': [5.56, 4.79, 4.49],  # Real data values from analytics
+                    'y': [5.2, 4.7, 4.5],
                     'marker': {'color': ['#3366cc', '#dc3912', '#ff9900']}
                 }
             ],
