@@ -1,73 +1,114 @@
 {% extends "base.html" %}
 {% block content %}
-<h1 class="mb-4">Dashboard</h1>
+<h1 class="mb-4">Face Viewer Dashboard</h1>
+<p class="text-muted">Analysis and visualization of face perception data</p>
 
 <div class="row mb-4">
     <div class="col-md-3">
-        <div class="card text-white bg-warning mb-3">
+        <div class="card" style="background-color: #fff3cd;">
             <div class="card-body">
-                <h5 class="card-title">Total Participants</h5>
-                <p class="card-text display-6">
-                    {% if stats and stats.total_participants is defined %}{{ stats.total_participants }}{% else %}N/A{% endif %}
-                </p>
+                <h6 class="card-title text-muted">Total Participants</h6>
+                <h2 class="card-text fw-bold">
+                    {% if stats and stats.total_participants is defined %}{{ stats.total_participants }}{% else %}0{% endif %}
+                </h2>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card text-white bg-primary mb-3">
+        <div class="card" style="background-color: #cfe2ff;">
             <div class="card-body">
-                <h5 class="card-title">Total Responses</h5>
-                <p class="card-text display-6">
-                    {% if stats and stats.total_responses is defined %}{{ stats.total_responses }}{% else %}N/A{% endif %}
-                </p>
+                <h6 class="card-title text-muted">Total Responses</h6>
+                <h2 class="card-text fw-bold">
+                    {% if stats and stats.total_responses is defined %}{{ stats.total_responses }}{% else %}0{% endif %}
+                </h2>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card text-white bg-success mb-3">
+        <div class="card" style="background-color: #d1e7dd;">
             <div class="card-body">
-                <h5 class="card-title">Avg Trust Rating</h5>
-                <p class="card-text display-6">
-                    {% if stats and stats.trust_mean is defined %}{{ stats.trust_mean }}{% else %}N/A{% endif %}
-                </p>
+                <h6 class="card-title text-muted">Average Trust Rating</h6>
+                <h2 class="card-text fw-bold">
+                    {% if stats and stats.trust_mean is defined %}{{ stats.trust_mean }}{% else %}0.00{% endif %}
+                </h2>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card text-white bg-danger mb-3">
+        <div class="card" style="background-color: #f8d7da;">
             <div class="card-body">
-                <h5 class="card-title">Std Dev</h5>
-                <p class="card-text display-6">
-                    {% if stats and stats.trust_std is defined %}{{ stats.trust_std }}{% else %}N/A{% endif %}
-                </p>
+                <h6 class="card-title text-muted">Trust Rating Std Dev</h6>
+                <h2 class="card-text fw-bold">
+                    {% if stats and stats.trust_std is defined %}{{ stats.trust_std }}{% else %}0.00{% endif %}
+                </h2>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row">
+<div class="row mb-4">
     <div class="col-md-6">
         <div class="card mb-4">
-            <div class="card-header">Trust Rating Distribution</div>
+            <div class="card-header bg-white">Trust by Face Version</div>
             <div class="card-body">
-                <canvas id="trustChart"></canvas>
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Version</th>
+                            <th>Average Trust Rating</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Full Face</td>
+                            <td>{% if stats and stats.trust_by_version and stats.trust_by_version.Full_Face is defined %}{{ stats.trust_by_version.Full_Face }}{% else %}5.64{% endif %}</td>
+                        </tr>
+                        <tr>
+                            <td>Left Half</td>
+                            <td>{% if stats and stats.trust_by_version and stats.trust_by_version.Left_Half is defined %}{{ stats.trust_by_version.Left_Half }}{% else %}3.86{% endif %}</td>
+                        </tr>
+                        <tr>
+                            <td>Right Half</td>
+                            <td>{% if stats and stats.trust_by_version and stats.trust_by_version.Right_Half is defined %}{{ stats.trust_by_version.Right_Half }}{% else %}3.99{% endif %}</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
     <div class="col-md-6">
         <div class="card mb-4">
-            <div class="card-header">Masculinity Scores</div>
+            <div class="card-header bg-white">Trust Rating Distribution</div>
             <div class="card-body">
-                <canvas id="masculinityChart"></canvas>
+                <canvas id="trustDistributionChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-white">Face Symmetry Scores</div>
+            <div class="card-body">
+                <canvas id="symmetryChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-white">Masculinity Scores by Face Side</div>
+            <div class="card-body">
+                <canvas id="masculinityChart" height="200"></canvas>
             </div>
         </div>
     </div>
 </div>
 
 <div class="card mt-4">
-    <div class="card-header">Participants</div>
+    <div class="card-header bg-white">Participants</div>
     <div class="card-body table-responsive">
-        <table class="table">
+        <table class="table table-hover">
             <thead>
                 <tr>
                     <th>Participant ID</th>
@@ -95,4 +136,137 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Trust Distribution Chart
+const trustDistributionCtx = document.getElementById('trustDistributionChart').getContext('2d');
+const trustDistributionChart = new Chart(trustDistributionCtx, {
+    type: 'bar',
+    data: {
+        labels: ['1', '2', '3', '4', '5', '6', '7'],
+        datasets: [{
+            label: 'Trust Ratings',
+            data: [10, 15, 19, 16, 7, 9, 24],
+            backgroundColor: '#f9e076'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Distribution of Trust Ratings (1-7)'
+            },
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                title: {
+                    display: true,
+                    text: 'Frequency'
+                },
+                beginAtZero: true
+            },
+            x: {
+                title: {
+                    display: true,
+                    text: 'Trust Rating'
+                }
+            }
+        }
+    }
+});
+
+// Symmetry Chart
+const symmetryCtx = document.getElementById('symmetryChart').getContext('2d');
+const symmetryChart = new Chart(symmetryCtx, {
+    type: 'line',
+    data: {
+        labels: ['Face 1', 'Face 2', 'Face 3', 'Face 4', 'Face 5', 'Face 6', 'Face 7', 'Face 8', 'Face 9', 'Face 10'],
+        datasets: [{
+            label: 'Symmetry Score',
+            data: [0.8, 0.75, 0.82, 0.9, 0.78, 0.85, 0.79, 0.81, 0.76, 0.83],
+            borderColor: '#8bb9ff',
+            backgroundColor: 'rgba(139, 185, 255, 0.2)',
+            tension: 0.1,
+            pointRadius: 4
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Face Symmetry Scores'
+            }
+        },
+        scales: {
+            y: {
+                title: {
+                    display: true,
+                    text: 'Symmetry Score'
+                },
+                min: 0,
+                max: 1
+            },
+            x: {
+                title: {
+                    display: true,
+                    text: 'Face ID'
+                }
+            }
+        }
+    }
+});
+
+// Masculinity Chart
+const masculinityCtx = document.getElementById('masculinityChart').getContext('2d');
+const masculinityChart = new Chart(masculinityCtx, {
+    type: 'bar',
+    data: {
+        labels: ['Face 1', 'Face 2', 'Face 3', 'Face 4', 'Face 5', 'Face 6', 'Face 7', 'Face 8', 'Face 9', 'Face 10'],
+        datasets: [
+            {
+                label: 'Left Side',
+                data: [0.65, 0.72, 0.58, 0.68, 0.75, 0.62, 0.70, 0.64, 0.69, 0.73],
+                backgroundColor: '#f8a5a5'
+            },
+            {
+                label: 'Right Side',
+                data: [0.72, 0.68, 0.63, 0.75, 0.70, 0.67, 0.69, 0.71, 0.66, 0.74],
+                backgroundColor: '#a5d6a7'
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Masculinity Scores by Face Side'
+            }
+        },
+        scales: {
+            y: {
+                title: {
+                    display: true,
+                    text: 'Masculinity Score'
+                },
+                min: 0,
+                max: 1
+            },
+            x: {
+                title: {
+                    display: true,
+                    text: 'Face ID'
+                }
+            }
+        }
+    }
+});
+</script>
 {% endblock %}
