@@ -139,7 +139,7 @@ def dashboard():
     return render_template(
         'dashboard.html',
         title='Dashboard',
-        stats=stats,  # Pass stats directly to match template expectations
+        summary_stats=summary_stats,
         participants=participants,
         recent_activity=[],
         trust_distribution=trust_distribution,
