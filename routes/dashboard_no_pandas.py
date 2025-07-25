@@ -17,6 +17,23 @@ def dashboard():
     data_path = os.path.join(os.getcwd(), 'data', 'working_data.csv')
     data_file_exists = os.path.exists(data_path)
     
+    # Log current working directory and data path for debugging
+    print(f"Dashboard route - Current working directory: {os.getcwd()}")
+    print(f"Dashboard route - Data path: {data_path}")
+    print(f"Dashboard route - Data file exists: {data_file_exists}")
+    
+    # Check if responses directory exists and list files
+    responses_dir = os.path.join(os.getcwd(), 'data', 'responses')
+    if os.path.exists(responses_dir):
+        print(f"Dashboard route - Responses directory exists: {responses_dir}")
+        try:
+            response_files = os.listdir(responses_dir)
+            print(f"Dashboard route - Files in responses directory: {response_files}")
+        except Exception as e:
+            print(f"Dashboard route - Error listing responses directory: {e}")
+    else:
+        print(f"Dashboard route - Responses directory does not exist: {responses_dir}")
+    
     # Set error message if needed
     error_message = None
     use_demo_data = os.environ.get('USE_DEMO_DATA', 'False').lower() == 'true' or not data_file_exists
