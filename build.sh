@@ -14,11 +14,17 @@ ensure_absolute_path() {
 
 # Function to safely compare semantic versions
 version_compare() {
-    if [[ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" != "$1" ]]; then
-        return 0  # $2 is greater than or equal to $1
-    else
-        return 1  # $2 is less than $1
-    fi
+    local v1="$1"
+    local v2="$2"
+    # Use Python itself to compare versions
+    python -c "
+import sys
+from packaging import version
+sys.exit(0) if version.parse('$v2') >= version.parse('$v1') else sys.exit(1)
+" 2>/dev/null || python -c "
+import sys
+sys.exit(0) if [int(x) for x in '$v2'.split('.')] >= [int(x) for x in '$v1'.split('.')] else sys.exit(1)
+"
 }
 
 # CRITICAL: Immediately intercept requirements-render.txt if it exists
@@ -102,6 +108,10 @@ find / -type d -name "*render*" 2>/dev/null | grep -v "Permission denied" || tru
 echo "Updating pip..."
 pip install --upgrade pip
 
+# Install packaging for version comparison
+echo "Installing packaging for version comparison..."
+pip install packaging
+
 # Set up pip wrapper to intercept all pip commands
 echo "Setting up pip wrapper..."
 if [ -f "pip_wrapper.sh" ]; then
@@ -183,8 +193,10 @@ fi
 
 # Compare versions properly using version_compare function
 if ! version_compare "$minimum_python_version" "$detected_python_version"; then
-    echo "Only Python versions above $minimum_python_version are supported, you have requested $detected_python_version"
+    echo "Error: Python version $detected_python_version is less than minimum required version $minimum_python_version"
     exit 1
+else
+    echo "Python version $detected_python_version is compatible (minimum required: $minimum_python_version)"
 fi
 
 # Install core dependencies explicitly
