@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 # Create blueprint
 dashboard_bp = Blueprint('dashboard', __name__)
 
+# Constants
+RESPONSES_DIR = os.path.join(os.getcwd(), 'data', 'responses')
+
 @dashboard_bp.route('/dashboard')
 def dashboard():
     """Display the main dashboard with fresh statistics from data/responses/ directory"""
@@ -31,138 +34,98 @@ def dashboard():
             "Right_Half": 3.99
         }
     }
-    participants = []
-
+    
+    # STEP 1: READ AND COMBINE PARTICIPANT FILES
+    combined = []
+    
     try:
-        # Read directly from data/responses directory
-        responses_dir = os.path.join(os.getcwd(), 'data', 'responses')
-        all_data = []
-        trust_scores = []
-        trust_by_version = {"Full Face": [], "Left Half": [], "Right Half": []}
-        participant_ids = set()
-        total_rows = 0
-        
-        if os.path.exists(responses_dir):
-            # Only include real participant files (not sample_*)
-            csv_files = [f for f in os.listdir(responses_dir) if f.endswith('.csv') and not f.startswith('sample_')]
-            logger.info(f"Found {len(csv_files)} real participant CSV files in {responses_dir}")
+        if os.path.exists(RESPONSES_DIR):
+            all_files = os.listdir(RESPONSES_DIR)
+            response_files = [f for f in all_files if f.endswith(".csv") and not f.startswith("sample_")]
             
-            for filename in csv_files:
-                file_path = os.path.join(responses_dir, filename)
+            logger.info(f"Found {len(response_files)} participant CSV files in {RESPONSES_DIR}")
+            
+            for filename in response_files:
+                filepath = os.path.join(RESPONSES_DIR, filename)
                 try:
-                    # Extract participant ID from filename
-                    participant_id = filename.replace('.csv', '')
-                    participant_ids.add(participant_id)
-                    
-                    # Read CSV file using built-in csv module
-                    with open(file_path, 'r', newline='', encoding='utf-8') as csvfile:
-                        reader = csv.DictReader(csvfile)
-                        file_rows = []
+                    with open(filepath, "r", encoding="utf-8") as file:
+                        reader = csv.DictReader(file)
                         for row in reader:
-                            file_rows.append(row)
-                            total_rows += 1
-                            
-                            # Extract trust scores if available
-                            if 'Trust' in row and row['Trust']:
-                                try:
-                                    trust_value = float(row['Trust'])
-                                    trust_scores.append(trust_value)
-                                    
-                                    # Group by face version if available
-                                    if 'FaceVersion' in row and row['FaceVersion']:
-                                        face_version = row['FaceVersion']
-                                        if face_version == 'Full Face' and face_version in trust_by_version:
-                                            trust_by_version['Full Face'].append(trust_value)
-                                        elif face_version == 'Left Half' and face_version in trust_by_version:
-                                            trust_by_version['Left Half'].append(trust_value)
-                                        elif face_version == 'Right Half' and face_version in trust_by_version:
-                                            trust_by_version['Right Half'].append(trust_value)
-                                except (ValueError, TypeError):
-                                    pass
-                        
-                        all_data.append(file_rows)
-                    logger.info(f"Successfully loaded {filename} with {len(file_rows)} rows")
+                            row["participant_file"] = filename
+                            combined.append(row)
+                    logger.info(f"Successfully loaded {filename} with data")
                 except Exception as e:
-                    logger.error(f"Skipping {filename} due to error: {e}")
-                    continue
+                    logger.error(f"Error reading participant file {filename}: {e}")
+    except Exception as e:
+        logger.error(f"Error reading participant files: {e}")
+        combined = []
+    
+    # STEP 2: BUILD unique_participants FROM combined
+    unique_participants = list(set(
+        row.get("Participant ID", row.get("ParticipantID", "Unknown")) for row in combined
+    ))
+    
+    logger.info(f"Found {len(unique_participants)} unique participants from {len(combined)} responses")
+    
+    # Extract trust scores and calculate statistics
+    trust_scores = []
+    trust_by_version = {"Full Face": [], "Left Half": [], "Right Half": []}
+    
+    for row in combined:
+        # Extract trust scores if available (handle different column naming conventions)
+        trust_value = None
+        if 'Trust' in row and row['Trust']:
+            try:
+                trust_value = float(row['Trust'])
+                trust_scores.append(trust_value)
+            except (ValueError, TypeError):
+                pass
         
-        # Calculate statistics from collected data
+        # Group by face version if available (handle different column naming conventions)
+        face_version = None
+        if 'FaceVersion' in row:
+            face_version = row['FaceVersion']
+        elif 'Face Version' in row:
+            face_version = row['Face Version']
+        
+        if face_version and trust_value is not None:
+            if face_version == 'Full Face' and face_version in trust_by_version:
+                trust_by_version['Full Face'].append(trust_value)
+            elif face_version == 'Left Half' and face_version in trust_by_version:
+                trust_by_version['Left Half'].append(trust_value)
+            elif face_version == 'Right Half' and face_version in trust_by_version:
+                trust_by_version['Right Half'].append(trust_value)
+    
+    # Calculate statistics from collected data
+    try:
         if trust_scores:
             try:
                 stats["trust_mean"] = round(sum(trust_scores) / len(trust_scores), 2)
                 
-                # Calculate standard deviation if we have more than one value
+                # Calculate standard deviation
                 if len(trust_scores) > 1:
-                    mean = sum(trust_scores) / len(trust_scores)
-                    variance = sum((x - mean) ** 2 for x in trust_scores) / len(trust_scores)
-                    stats["trust_std"] = round((variance ** 0.5), 2)
+                    stats["trust_std"] = round(statistics.stdev(trust_scores), 2)
                 else:
-                    stats["trust_std"] = 0.0
-                    
-                stats["total_responses"] = len(trust_scores)
-                logger.info(f"Calculated trust stats: mean={stats['trust_mean']}, std={stats['trust_std']}, responses={stats['total_responses']}")
-            except Exception as e:
-                logger.error(f"Error calculating trust statistics: {e}")
-        
-        # Set participant count
-        stats["total_participants"] = len(participant_ids)
-        logger.info(f"Found {stats['total_participants']} unique participants")
-        
-        # Calculate average trust by face version
-        for version, scores in trust_by_version.items():
-            if scores:
-                key = version.replace(' ', '_')
-                try:
-                    stats["trust_by_version"][key] = round(sum(scores) / len(scores), 2)
-                    logger.info(f"Calculated {version} trust: {stats['trust_by_version'][key]} from {len(scores)} scores")
-                except Exception as e:
-                    logger.error(f"Error calculating {version} trust: {e}")
-            
-            # Create trust distribution data
-            trust_distribution_data = [0, 0, 0, 0, 0, 0, 0]  # Default empty data for 7 bins
-            
-            # Create symmetry scores data (sample data for chart)
-            face_ids = [f'Face {i}' for i in range(1, 26)]
-            symmetry_scores = [round(0.75 + 0.2 * (i % 5) / 10, 2) for i in range(25)]
-            
-            # Create masculinity scores data (sample data for chart)
-            masculinity_left = [round(0.4 + 0.4 * (i % 7) / 10, 2) for i in range(25)]
-            masculinity_right = [round(0.45 + 0.35 * (i % 5) / 10, 2) for i in range(25)]
-            
-            # Try to generate real chart data from the combined dataframe
-            try:
-                # Generate trust distribution data from real data
-                if "Trust" in combined.columns:
-                    # Create histogram bins for trust ratings (1-7)
-                    trust_bins = [0, 1, 2, 3, 4, 5, 6, 7]
-                    trust_counts = combined["Trust"].value_counts(bins=pd.IntervalIndex.from_breaks(trust_bins), sort=False).tolist()
-                    if len(trust_counts) == 7:  # Ensure we have all 7 bins
-                        trust_distribution_data = trust_counts
-                        logger.info(f"Generated trust distribution: {trust_distribution_data}")
+                    stats["trust_std"] = 0.00
                 
-                # Extract symmetry data if available
-                if "FaceID" in combined.columns and "Symmetry" in combined.columns:
-                    face_symmetry_df = combined.groupby("FaceID")["Symmetry"].mean().reset_index()
-                    face_ids = [f"Face {id}" for id in face_symmetry_df["FaceID"].tolist()[:25]]
-                    symmetry_scores = face_symmetry_df["Symmetry"].tolist()[:25]
-                    logger.info(f"Generated symmetry scores for {len(face_ids)} faces")
-                
-                # Extract masculinity data if available
-                if "FaceID" in combined.columns and "MasculinityLeft" in combined.columns and "MasculinityRight" in combined.columns:
-                    face_masc_df = combined.groupby("FaceID")[["MasculinityLeft", "MasculinityRight"]].mean().reset_index()
-                    masculinity_left = face_masc_df["MasculinityLeft"].tolist()[:25]
-                    masculinity_right = face_masc_df["MasculinityRight"].tolist()[:25]
-                    logger.info(f"Generated masculinity scores for {len(masculinity_left)} faces")
+                # Calculate means by face version
+                for version in trust_by_version:
+                    if trust_by_version[version]:
+                        version_key = version.replace(' ', '_')
+                        stats["trust_by_version"][version_key] = round(sum(trust_by_version[version]) / len(trust_by_version[version]), 2)
             except Exception as e:
-                logger.error(f"Error generating chart data: {e}")
-                # Continue with default/sample data
+                logger.error(f"Error calculating statistics: {e}")
+        
+        # Set total counts
+        stats["total_responses"] = len(combined)
+        stats["total_participants"] = len(unique_participants)
     except Exception as e:
-        logger.error(f"Dashboard data load error: {e}")
-
-    # Participant file listing - only include real participants (not sample_*)
-    responses_dir = os.path.join(os.getcwd(), 'data', 'responses')
-    if os.path.exists(responses_dir):
-        for filename in os.listdir(responses_dir):
+        logger.error(f"Error processing data: {e}")
+    
+    # Build participants list for display
+    participants = []
+    if os.path.exists(RESPONSES_DIR):
+        for filename in os.listdir(RESPONSES_DIR):
             if filename.endswith(".csv") and not filename.startswith("sample_"):
                 pid = filename.replace(".csv", "")
                 participants.append({
@@ -259,23 +222,25 @@ def dashboard():
     }
     
     # Never use demo data
-    data_file_exists = total_rows > 0
+    data_file_exists = len(combined) > 0
     use_demo_data = False
     error_message = None if data_file_exists else "No participant data found in responses directory. Please add participant data files."
     
     logger.info(f"Rendering dashboard with {len(participants)} participants, {stats['total_responses']} responses")
     
-    # Render dashboard template
+    # STEP 3: PASS combined TO render_template()
     return render_template(
         'dashboard.html',
         title='Face Viewer Dashboard',
         summary_stats=summary_stats,
         participants=participants,
+        responses=combined,
+        total_responses=len(combined),
         recent_activity=[],
         trust_distribution=trust_distribution,
         trust_boxplot=trust_boxplot,
         trust_histogram=trust_histogram,
         error_message=error_message,
         use_demo_data=use_demo_data,
-        data_file_exists=data_file_exists
+        data_file_exists=len(combined) > 0
     )
