@@ -1,7 +1,25 @@
 #!/bin/bash
-# Force clean build: $(date +%s) - July 20, 2025
+# Force clean build: $(date +%s) - July 26, 2025
 set -x  # Print each command before executing (for debugging)
 set -e  # Exit immediately if a command exits with a non-zero status
+
+# Function to ensure absolute paths
+ensure_absolute_path() {
+    local path="$1"
+    if [[ "$path" != /* ]]; then
+        path="$(pwd)/$path"
+    fi
+    echo "$path"
+}
+
+# Function to safely compare semantic versions
+version_compare() {
+    if [[ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" != "$1" ]]; then
+        return 0  # $2 is greater than or equal to $1
+    else
+        return 1  # $2 is less than $1
+    fi
+}
 
 # CRITICAL: Immediately intercept requirements-render.txt if it exists
 echo "CRITICAL: Checking for requirements-render.txt at script start"
@@ -25,6 +43,24 @@ echo "Pip version: $(pip --version 2>&1)"
 echo "===== END DEBUG INFO ====="
 
 echo "Starting build process for Face Viewer Dashboard..."
+
+# Ensure data directory exists and is preserved
+echo "Ensuring data directory structure exists..."
+mkdir -p "$(pwd)/data/responses"
+touch "$(pwd)/data/responses/.gitkeep"
+
+# Ensure static publish path exists
+RENDER_STATIC_PUBLISH_PATH="$(pwd)/static"
+if [ ! -d "$RENDER_STATIC_PUBLISH_PATH" ]; then
+    echo "Creating static publish directory at $RENDER_STATIC_PUBLISH_PATH"
+    mkdir -p "$RENDER_STATIC_PUBLISH_PATH"
+fi
+
+# Verify static publish path is not empty
+if [ -z "$(ls -A "$RENDER_STATIC_PUBLISH_PATH")" ]; then
+    echo "Static publish directory is empty, adding placeholder file"
+    touch "$RENDER_STATIC_PUBLISH_PATH/.gitkeep"
+fi
 
 # Aggressively search for and clean any requirements-render.txt files
 echo "Aggressively searching for requirements-render.txt..."
@@ -68,10 +104,12 @@ pip install --upgrade pip
 
 # Set up pip wrapper to intercept all pip commands
 echo "Setting up pip wrapper..."
-chmod +x pip_wrapper.sh
-export PATH="$(pwd):$PATH"
-alias pip="$(pwd)/pip_wrapper.sh"
-echo "PATH=$PATH"
+if [ -f "pip_wrapper.sh" ]; then
+    chmod +x pip_wrapper.sh
+    export PATH="$(pwd):$PATH"
+    alias pip="$(pwd)/pip_wrapper.sh"
+    echo "PATH=$PATH"
+fi
 
 # Create a clean environment marker to prevent cached builds
 echo "Creating clean build marker..."
@@ -80,7 +118,7 @@ touch .render_clean_build_v3
 # Create a complete block for pandas
 echo "Creating complete pandas block..."
 echo "#!/bin/bash
-# Force clean build: $(date +%s) - July 20, 2025
+# Force clean build: $(date +%s) - July 26, 2025
 echo 'ERROR: pandas installation blocked by build script'
 exit 1" > /tmp/pandas-block.sh
 chmod +x /tmp/pandas-block.sh
@@ -98,8 +136,11 @@ no-cache-dir=true
 # Create a fake pandas package to prevent installation
 echo "Creating fake pandas package..."
 mkdir -p /tmp/fake-pandas/pandas
-echo "setup() {\n  echo 'Fake pandas package to prevent real pandas installation'\n}" > /tmp/fake-pandas/setup.sh
-echo "def __getattr__(name):\n    raise ImportError('pandas is not available')" > /tmp/fake-pandas/pandas/__init__.py
+echo "setup() {
+  echo 'Fake pandas package to prevent real pandas installation'
+}" > /tmp/fake-pandas/setup.sh
+echo "def __getattr__(name):
+    raise ImportError('pandas is not available')" > /tmp/fake-pandas/pandas/__init__.py
 
 # Create a pre-installation hook to intercept pip install commands
 echo "Creating pip pre-installation hook..."
@@ -129,6 +170,23 @@ while true; do
 done
 ) &
 
+# Detect Python version and validate
+echo "Detecting and validating Python version..."
+detected_python_version=$(python --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+minimum_python_version="3.8.0"
+
+# Validate Python version format
+if [[ ! "$detected_python_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "The PYTHON_VERSION must provide a major, minor, and patch version, e.g. 3.8.1. You have requested $detected_python_version. See https://render.com/docs/python-version for more information."
+    detected_python_version="3.8.1"  # Default to a safe version
+fi
+
+# Compare versions properly using version_compare function
+if ! version_compare "$minimum_python_version" "$detected_python_version"; then
+    echo "Only Python versions above $minimum_python_version are supported, you have requested $detected_python_version"
+    exit 1
+fi
+
 # Install core dependencies explicitly
 echo "Installing core dependencies explicitly..."
 pip install Flask==2.3.3 Werkzeug==2.3.7 Flask-Login==0.6.2 Flask-WTF==1.1.1
@@ -152,8 +210,11 @@ fi
 
 # Create a symbolic link to prevent pandas from being installed
 echo "Creating symbolic link to prevent pandas installation..."
-mkdir -p $(pip show pip | grep Location | cut -d' ' -f2)/pandas
-touch $(pip show pip | grep Location | cut -d' ' -f2)/pandas/__init__.py
+pip_location=$(pip show pip | grep Location | cut -d' ' -f2)
+if [ -n "$pip_location" ]; then
+    mkdir -p "$pip_location/pandas"
+    touch "$pip_location/pandas/__init__.py"
+fi
 
 echo "Verifying core installations..."
 pip show Flask
