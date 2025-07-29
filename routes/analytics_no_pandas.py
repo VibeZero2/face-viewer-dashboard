@@ -119,12 +119,16 @@ def dashboard():
             "std_trust_rating": 0
         }
         
+        # Ensure columns is defined even when no data is present
+        columns = []
+        
         return render_template(
             'analytics.html',
             title='Analytics',
             participants=[],
             stats=stats,
             summary_stats=summary_stats,
+            columns=columns,
             use_demo_data=False,
             error_message=error_message
         )
@@ -198,6 +202,11 @@ def dashboard():
         "std_trust_rating": stats.get('trust_std', 0)
     }
     
+    # Extract column names from the first participant if available
+    columns = []
+    if unique_participants and len(unique_participants) > 0:
+        columns = list(unique_participants[0].keys())
+    
     logger.info(f"[ANALYTICS] Rendering analytics with {len(unique_participants)} participants, {stats['total_responses']} responses")
     
     return render_template(
@@ -206,6 +215,7 @@ def dashboard():
         participants=unique_participants,
         stats=stats,
         summary_stats=summary_stats,
+        columns=columns,
         use_demo_data=use_demo_data,
         error_message=error_message
     )
