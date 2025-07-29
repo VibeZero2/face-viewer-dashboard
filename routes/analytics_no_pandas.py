@@ -21,41 +21,78 @@ analytics_bp = Blueprint('analytics', __name__)
 
 # Constants
 RESPONSES_DIR = os.path.join(os.getcwd(), 'data', 'responses')
+# Ensure the responses directory exists at startup
+os.makedirs(RESPONSES_DIR, exist_ok=True)
+
+def get_all_participant_data():
+    """
+    Robustly load all participant CSVs from the responses directory.
+    Returns a list of dictionaries, each representing a row from a CSV file.
+    """
+    all_data = []
+    if not os.path.exists(RESPONSES_DIR):
+        logger.warning(f"[ANALYTICS] Responses directory does not exist: {RESPONSES_DIR}")
+        return all_data
+    
+    try:
+        files = os.listdir(RESPONSES_DIR)
+        logger.info(f"[ANALYTICS] Found {len(files)} files in {RESPONSES_DIR}")
+        
+        for filename in files:
+            if filename.endswith('.csv'):
+                filepath = os.path.join(RESPONSES_DIR, filename)
+                try:
+                    logger.info(f"[ANALYTICS] Reading CSV file: {filepath}")
+                    with open(filepath, 'r', newline='', encoding='utf-8') as f:
+                        reader = csv.DictReader(f)
+                        file_data = list(reader)
+                        logger.info(f"[ANALYTICS] Read {len(file_data)} rows from {filename}")
+                        
+                        # Add source filename to each row
+                        for row in file_data:
+                            row['participant_file'] = filename
+                        
+                        all_data.extend(file_data)
+                except Exception as e:
+                    logger.error(f"[ANALYTICS] Error reading {filepath}: {e}")
+    except Exception as e:
+        logger.error(f"[ANALYTICS] Error listing files in {RESPONSES_DIR}: {e}")
+    
+    logger.info(f"[ANALYTICS] Total rows loaded from all CSVs: {len(all_data)}")
+    return all_data
 
 @analytics_bp.route('/analytics')
 def dashboard():
     """Display the analytics dashboard with fresh statistics from data/responses/ directory"""
     # STEP 1: READ AND COMBINE PARTICIPANT FILES
-    combined = []
-    
-    try:
-        if os.path.exists(RESPONSES_DIR):
-            all_files = os.listdir(RESPONSES_DIR)
-            response_files = [f for f in all_files if f.endswith(".csv") and not f.startswith("sample_")]
-            
-            logger.info(f"Found {len(response_files)} participant CSV files in {RESPONSES_DIR}")
-            
-            for filename in response_files:
-                filepath = os.path.join(RESPONSES_DIR, filename)
-                try:
-                    with open(filepath, "r", encoding="utf-8") as file:
-                        reader = csv.DictReader(file)
-                        for row in reader:
-                            row["participant_file"] = filename
-                            combined.append(row)
-                    logger.info(f"Successfully loaded {filename} with data")
-                except Exception as e:
-                    logger.error(f"Error reading participant file {filename}: {e}")
-    except Exception as e:
-        logger.error(f"Error reading participant files: {e}")
-        combined = []
+    combined = get_all_participant_data()
     
     # STEP 2: BUILD unique_participants FROM combined
-    unique_participants = list(set(
-        row.get("Participant ID", row.get("ParticipantID", "Unknown")) for row in combined
-    ))
+    unique_participants = []
+    if combined:
+        # Extract unique participant IDs
+        unique_participant_ids = set()
+        for row in combined:
+            # Handle different column naming conventions
+            pid = row.get('Participant ID', row.get('ParticipantID', None))
+            if pid:
+                unique_participant_ids.add(pid)
+        
+        # Create participant objects
+        for pid in unique_participant_ids:
+            # Find the source file for this participant
+            participant_files = set(row['participant_file'] for row in combined 
+                                  if row.get('Participant ID', row.get('ParticipantID', None)) == pid)
+            
+            for filename in participant_files:
+                unique_participants.append({
+                    "id": pid,
+                    "csv": f"/data/responses/{filename}",
+                    "xlsx": None,
+                    "enc": None
+                })
     
-    logger.info(f"Found {len(unique_participants)} unique participants from {len(combined)} responses")
+    logger.info(f"[ANALYTICS] Found {len(unique_participants)} unique participants from {len(combined)} responses")
     
     # Extract trust scores and calculate statistics
     stats = {
@@ -83,154 +120,94 @@ def dashboard():
             except (ValueError, TypeError):
                 pass
         
-        # Group by face version if available (handle different column naming conventions)
-        face_version = None
-        if 'FaceVersion' in row:
-            face_version = row['FaceVersion']
-        elif 'Face Version' in row:
-            face_version = row['Face Version']
-        
+        # Categorize by face version
+        face_version = row.get('FaceVersion', None)
         if face_version and trust_value is not None:
-            if face_version == 'Full Face' and face_version in trust_by_version:
+            if face_version == 'Full Face':
                 trust_by_version['Full Face'].append(trust_value)
-            elif face_version == 'Left Half' and face_version in trust_by_version:
+            elif face_version == 'Left Half':
                 trust_by_version['Left Half'].append(trust_value)
-            elif face_version == 'Right Half' and face_version in trust_by_version:
+            elif face_version == 'Right Half':
                 trust_by_version['Right Half'].append(trust_value)
     
-    # Calculate statistics from collected data
-    try:
-        if trust_scores:
-            try:
-                stats["trust_mean"] = round(sum(trust_scores) / len(trust_scores), 2)
-                
-                # Calculate standard deviation
-                if len(trust_scores) > 1:
-                    stats["trust_std"] = round(statistics.stdev(trust_scores), 2)
-                else:
-                    stats["trust_std"] = 0.00
-                
-                # Calculate means by face version
-                for version in trust_by_version:
-                    if trust_by_version[version]:
-                        version_key = version.replace(' ', '_')
-                        stats["trust_by_version"][version_key] = round(sum(trust_by_version[version]) / len(trust_by_version[version]), 2)
-            except Exception as e:
-                logger.error(f"Error calculating statistics: {e}")
+    # Calculate statistics
+    if trust_scores:
+        stats['trust_mean'] = round(sum(trust_scores) / len(trust_scores), 2)
         
-        # Set total counts
-        stats["total_responses"] = len(combined)
-        stats["total_participants"] = len(unique_participants)
-    except Exception as e:
-        logger.error(f"Error processing data: {e}")
+        # Calculate standard deviation
+        if len(trust_scores) > 1:
+            mean = stats['trust_mean']
+            variance = sum((x - mean) ** 2 for x in trust_scores) / len(trust_scores)
+            stats['trust_std'] = round(variance ** 0.5, 2)
     
-    # Format for template
-    summary_stats = {
-        'total_participants': stats.get('total_participants', 0),
-        'total_responses': stats.get('total_responses', 0),
-        'avg_trust_rating': stats.get('trust_mean', 0),
-        'std_trust_rating': stats.get('trust_std', 0),
-    }
+    # Calculate statistics by face version
+    for version in trust_by_version:
+        scores = trust_by_version[version]
+        if scores:
+            version_key = version.replace(' ', '_')
+            stats['trust_by_version'][version_key] = round(sum(scores) / len(scores), 2)
     
-    # Available analyses for the dashboard
-    available_analyses = [
-        {'id': 'trust_by_face', 'name': 'Trust Rating by Face Type'},
-        {'id': 'masc_by_side', 'name': 'Masculinity by Face Side'},
-        {'id': 'symmetry_analysis', 'name': 'Symmetry Score Analysis'},
-        {'id': 'trust_masc_correlation', 'name': 'Trust-Masculinity Correlation'}
-    ]
+    stats['total_responses'] = len(combined)
+    stats['total_participants'] = len(unique_participants)
     
-    # Columns for data analysis
-    columns = [
-        {'id': 'participant_id', 'name': 'Participant ID', 'type': 'string'},
-        {'id': 'face_id', 'name': 'Face ID', 'type': 'string'},
-        {'id': 'face_type', 'name': 'Face Type', 'type': 'categorical'},
-        {'id': 'trust_rating', 'name': 'Trust Rating', 'type': 'numeric'},
-        {'id': 'masculinity_score', 'name': 'Masculinity Score', 'type': 'numeric'},
-        {'id': 'symmetry_score', 'name': 'Symmetry Score', 'type': 'numeric'},
-        {'id': 'response_time', 'name': 'Response Time (ms)', 'type': 'numeric'}
-    ]
+    # Never use demo data
+    data_file_exists = len(combined) > 0
+    use_demo_data = False
+    error_message = None if data_file_exists else "No participant data found in responses directory. Please add participant data files."
     
-    # Render analytics template
+    logger.info(f"[ANALYTICS] Rendering analytics with {len(unique_participants)} participants, {stats['total_responses']} responses")
+    
+    # STEP 3: PASS combined TO render_template()
     return render_template(
         'analytics.html',
         title='Face Viewer Analytics',
-        summary_stats=summary_stats,
-        available_analyses=available_analyses,
-        columns=columns,
         participants=unique_participants,
         responses=combined,
         total_responses=len(combined),
-        data_file_exists=len(combined) > 0
+        error_message=error_message,
+        use_demo_data=use_demo_data,
+        data_file_exists=data_file_exists
     )
 
 @analytics_bp.route('/api/run_analysis', methods=['GET', 'POST'])
 def run_analysis():
     """API endpoint to run statistical analysis"""
+    # Get analysis type from request
+    analysis_type = request.args.get('type', 'trust_by_face')
+    
     try:
-        # STEP 1: READ AND COMBINE PARTICIPANT FILES
-        combined = []
+        # Get fresh data for analysis
+        combined = get_all_participant_data()
         
-        try:
-            if os.path.exists(RESPONSES_DIR):
-                all_files = os.listdir(RESPONSES_DIR)
-                response_files = [f for f in all_files if f.endswith(".csv") and not f.startswith("sample_")]
-                
-                logger.info(f"Found {len(response_files)} participant CSV files in {RESPONSES_DIR}")
-                
-                for filename in response_files:
-                    filepath = os.path.join(RESPONSES_DIR, filename)
-                    try:
-                        with open(filepath, "r", encoding="utf-8") as file:
-                            reader = csv.DictReader(file)
-                            for row in reader:
-                                row["participant_file"] = filename
-                                combined.append(row)
-                        logger.info(f"Successfully loaded {filename} with data")
-                    except Exception as e:
-                        logger.error(f"Error reading participant file {filename}: {e}")
-        except Exception as e:
-            logger.error(f"Error reading participant files: {e}")
-            combined = []
+        if not combined:
+            logger.warning("[ANALYTICS] No data available for analysis")
+            raise ValueError("No participant data available for analysis")
         
-        # Get request data
-        if request.method == 'POST':
-            data = request.json
-            analysis_type = data.get('analysis_type')
-        else:  # GET method
-            analysis_type = request.args.get('analysis_type', 'trust_by_face')
-        
-        # Extract trust scores and calculate statistics
-        trust_scores = []
+        # Extract trust scores by face version
         trust_by_version = {"Full Face": [], "Left Half": [], "Right Half": []}
         
         for row in combined:
-            # Extract trust scores if available (handle different column naming conventions)
+            # Extract trust scores if available
             trust_value = None
             if 'Trust' in row and row['Trust']:
                 try:
                     trust_value = float(row['Trust'])
-                    trust_scores.append(trust_value)
                 except (ValueError, TypeError):
-                    pass
+                    continue
             
-            # Group by face version if available (handle different column naming conventions)
-            face_version = None
-            if 'FaceVersion' in row:
-                face_version = row['FaceVersion']
-            elif 'Face Version' in row:
-                face_version = row['Face Version']
-            
+            # Categorize by face version
+            face_version = row.get('FaceVersion', None)
             if face_version and trust_value is not None:
-                if face_version == 'Full Face' and face_version in trust_by_version:
+                if face_version == 'Full Face':
                     trust_by_version['Full Face'].append(trust_value)
-                elif face_version == 'Left Half' and face_version in trust_by_version:
+                elif face_version == 'Left Half':
                     trust_by_version['Left Half'].append(trust_value)
-                elif face_version == 'Right Half' and face_version in trust_by_version:
+                elif face_version == 'Right Half':
                     trust_by_version['Right Half'].append(trust_value)
         
-        # Calculate means by face version
-        trust_by_face_means = [0, 0, 0]
+        # Calculate mean trust by face version
+        trust_by_face_means = [0, 0, 0]  # [Full Face, Left Half, Right Half]
+        
         if trust_by_version['Full Face']:
             trust_by_face_means[0] = round(sum(trust_by_version['Full Face']) / len(trust_by_version['Full Face']), 2)
         if trust_by_version['Left Half']:
@@ -276,7 +253,7 @@ def run_analysis():
             ]
         }
     except Exception as e:
-        logger.error(f"API run_analysis - Error: {e}")
+        logger.error(f"[ANALYTICS] API run_analysis - Error: {e}")
         # Fallback to default values on error
         results = {
             'success': True,
