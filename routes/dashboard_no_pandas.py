@@ -3,11 +3,13 @@ Dashboard routes for Face Viewer Dashboard (pandas-free version)
 Uses fresh statistics from data/responses/ directory
 """
 
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request, jsonify
 import os
-import csv
 import statistics
 import logging
+import json
+from datetime import datetime
+from utils.data_loader import load_all_participant_data
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -21,48 +23,11 @@ RESPONSES_DIR = os.path.join(os.getcwd(), 'data', 'responses')
 # Ensure the responses directory exists at startup
 os.makedirs(RESPONSES_DIR, exist_ok=True)
 
-def get_all_participant_data():
-    """
-    Robustly load all participant CSVs from the responses directory.
-    Returns a list of dictionaries, each representing a row from a CSV file.
-    """
-    all_data = []
-    if not os.path.exists(RESPONSES_DIR):
-        logger.warning(f"Responses directory does not exist: {RESPONSES_DIR}")
-        return all_data
-    
-    try:
-        files = os.listdir(RESPONSES_DIR)
-        logger.info(f"Found {len(files)} files in {RESPONSES_DIR}")
-        
-        for filename in files:
-            if filename.endswith('.csv'):
-                filepath = os.path.join(RESPONSES_DIR, filename)
-                try:
-                    logger.info(f"Reading CSV file: {filepath}")
-                    with open(filepath, 'r', newline='', encoding='utf-8') as f:
-                        reader = csv.DictReader(f)
-                        file_data = list(reader)
-                        logger.info(f"Read {len(file_data)} rows from {filename}")
-                        
-                        # Add source filename to each row
-                        for row in file_data:
-                            row['participant_file'] = filename
-                        
-                        all_data.extend(file_data)
-                except Exception as e:
-                    logger.error(f"Error reading {filepath}: {e}")
-    except Exception as e:
-        logger.error(f"Error listing files in {RESPONSES_DIR}: {e}")
-    
-    logger.info(f"Total rows loaded from all CSVs: {len(all_data)}")
-    return all_data
-
 @dashboard_bp.route('/dashboard')
 def dashboard():
     """Display the main dashboard with fresh statistics from data/responses/ directory"""
     # STEP 1: READ AND COMBINE PARTICIPANT FILES
-    combined = get_all_participant_data()
+    combined = load_all_participant_data(RESPONSES_DIR)
     
     # If no data, return early with error message
     if not combined:
@@ -113,6 +78,19 @@ def dashboard():
                 })
     
     logger.info(f"Found {len(unique_participants)} unique participants from {len(combined)} responses")
+    
+    # Initialize stats dictionary and data structures
+    stats = {
+        "trust_mean": 0.00,
+        "trust_std": 0.00,
+        "total_responses": 0,
+        "total_participants": 0,
+        "trust_by_version": {
+            "Full_Face": 0.00,
+            "Left_Half": 0.00,
+            "Right_Half": 0.00
+        }
+    }
     
     # Extract trust scores and calculate statistics
     trust_scores = []

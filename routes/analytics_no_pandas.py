@@ -11,6 +11,7 @@ import statistics
 import logging
 from datetime import datetime
 from utils.cache import cached, clear_cache, cache
+from utils.data_loader import load_all_participant_data
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -24,48 +25,13 @@ RESPONSES_DIR = os.path.join(os.getcwd(), 'data', 'responses')
 # Ensure the responses directory exists at startup
 os.makedirs(RESPONSES_DIR, exist_ok=True)
 
-def get_all_participant_data():
-    """
-    Robustly load all participant CSVs from the responses directory.
-    Returns a list of dictionaries, each representing a row from a CSV file.
-    """
-    all_data = []
-    if not os.path.exists(RESPONSES_DIR):
-        logger.warning(f"[ANALYTICS] Responses directory does not exist: {RESPONSES_DIR}")
-        return all_data
-    
-    try:
-        files = os.listdir(RESPONSES_DIR)
-        logger.info(f"[ANALYTICS] Found {len(files)} files in {RESPONSES_DIR}")
-        
-        for filename in files:
-            if filename.endswith('.csv'):
-                filepath = os.path.join(RESPONSES_DIR, filename)
-                try:
-                    logger.info(f"[ANALYTICS] Reading CSV file: {filepath}")
-                    with open(filepath, 'r', newline='', encoding='utf-8') as f:
-                        reader = csv.DictReader(f)
-                        file_data = list(reader)
-                        logger.info(f"[ANALYTICS] Read {len(file_data)} rows from {filename}")
-                        
-                        # Add source filename to each row
-                        for row in file_data:
-                            row['participant_file'] = filename
-                        
-                        all_data.extend(file_data)
-                except Exception as e:
-                    logger.error(f"[ANALYTICS] Error reading {filepath}: {e}")
-    except Exception as e:
-        logger.error(f"[ANALYTICS] Error listing files in {RESPONSES_DIR}: {e}")
-    
-    logger.info(f"[ANALYTICS] Total rows loaded from all CSVs: {len(all_data)}")
-    return all_data
+# Using the shared data_loader utility instead of duplicating code
 
 @analytics_bp.route('/analytics')
 def dashboard():
     """Display the analytics dashboard with fresh statistics from data/responses/ directory"""
     # STEP 1: READ AND COMBINE PARTICIPANT FILES
-    combined = get_all_participant_data()
+    combined = load_all_participant_data(RESPONSES_DIR)
     
     # STEP 2: BUILD unique_participants FROM combined
     unique_participants = []
@@ -227,8 +193,8 @@ def run_analysis():
     analysis_type = request.args.get('type', 'trust_by_face')
     
     try:
-        # Get fresh data for analysis
-        combined = get_all_participant_data()
+        # Get all participant data
+        combined = load_all_participant_data(RESPONSES_DIR)
         
         if not combined:
             logger.warning("[ANALYTICS] No data available for analysis")
