@@ -61,21 +61,31 @@ def get_all_participant_data():
 @dashboard_bp.route('/dashboard')
 def dashboard():
     """Display the main dashboard with fresh statistics from data/responses/ directory"""
-    # Initialize stats with safe defaults
-    stats = {
-        "trust_mean": 0.00,
-        "trust_std": 0.00,
-        "total_responses": 0,
-        "total_participants": 0,
-        "trust_by_version": {
-            "Full_Face": 5.64,
-            "Left_Half": 3.86,
-            "Right_Half": 3.99
-        }
-    }
-    
     # STEP 1: READ AND COMBINE PARTICIPANT FILES
     combined = get_all_participant_data()
+    
+    # If no data, return early with error message
+    if not combined:
+        logger.warning("No participant data found in responses directory. Cannot calculate statistics.")
+        error_message = "No participant data found in data/responses/ directory. Please ensure CSV files are present and properly formatted."
+        return render_template(
+            'dashboard.html',
+            title='Dashboard',
+            participants=[],
+            stats={
+                "trust_mean": 0.00,
+                "trust_std": 0.00,
+                "total_responses": 0,
+                "total_participants": 0,
+                "trust_by_version": {
+                    "Full_Face": 0.00,
+                    "Left_Half": 0.00,
+                    "Right_Half": 0.00
+                }
+            },
+            use_demo_data=False,
+            error_message=error_message
+        )
     
     # STEP 2: BUILD unique_participants FROM combined
     unique_participants = []

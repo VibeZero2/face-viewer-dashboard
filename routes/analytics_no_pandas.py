@@ -94,6 +94,41 @@ def dashboard():
     
     logger.info(f"[ANALYTICS] Found {len(unique_participants)} unique participants from {len(combined)} responses")
     
+    # If no data, return early with error message
+    if not combined:
+        logger.warning("[ANALYTICS] No participant data found in responses directory. Cannot calculate statistics.")
+        error_message = "No participant data found in data/responses/ directory. Please ensure CSV files are present and properly formatted."
+        # Create empty stats for the template
+        stats = {
+            "trust_mean": 0.00,
+            "trust_std": 0.00,
+            "total_responses": 0,
+            "total_participants": 0,
+            "trust_by_version": {
+                "Full_Face": 0.00,
+                "Left_Half": 0.00,
+                "Right_Half": 0.00
+            }
+        }
+        
+        # Create summary stats for the template
+        summary_stats = {
+            "total_participants": 0,
+            "total_responses": 0,
+            "avg_trust_rating": 0,
+            "std_trust_rating": 0
+        }
+        
+        return render_template(
+            'analytics.html',
+            title='Analytics',
+            participants=[],
+            stats=stats,
+            summary_stats=summary_stats,
+            use_demo_data=False,
+            error_message=error_message
+        )
+    
     # Extract trust scores and calculate statistics
     stats = {
         "trust_mean": 0.00,
