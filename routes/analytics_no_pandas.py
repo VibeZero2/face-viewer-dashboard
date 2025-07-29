@@ -153,7 +153,7 @@ def dashboard():
     # Never use demo data
     data_file_exists = len(combined) > 0
     use_demo_data = False
-    error_message = None if data_file_exists else "No participant data found in responses directory. Please add participant data files."
+    error_message = None if data_file_exists else "No participant data found in data/responses/ directory. Please ensure CSV files are present and properly formatted."
     
     logger.info(f"[ANALYTICS] Rendering analytics with {len(unique_participants)} participants, {stats['total_responses']} responses")
     
