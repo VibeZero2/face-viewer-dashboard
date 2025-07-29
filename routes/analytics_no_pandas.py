@@ -155,18 +155,24 @@ def dashboard():
     use_demo_data = False
     error_message = None if data_file_exists else "No participant data found in data/responses/ directory. Please ensure CSV files are present and properly formatted."
     
+    # Create summary stats for the template
+    summary_stats = {
+        "total_participants": len(unique_participants),
+        "total_responses": stats['total_responses'],
+        "avg_trust_rating": stats.get('trust_mean', 0),
+        "std_trust_rating": stats.get('trust_std', 0)
+    }
+    
     logger.info(f"[ANALYTICS] Rendering analytics with {len(unique_participants)} participants, {stats['total_responses']} responses")
     
-    # STEP 3: PASS combined TO render_template()
     return render_template(
         'analytics.html',
-        title='Face Viewer Analytics',
+        title='Analytics',
         participants=unique_participants,
-        responses=combined,
-        total_responses=len(combined),
-        error_message=error_message,
+        stats=stats,
+        summary_stats=summary_stats,
         use_demo_data=use_demo_data,
-        data_file_exists=data_file_exists
+        error_message=error_message
     )
 
 @analytics_bp.route('/api/run_analysis', methods=['GET', 'POST'])
