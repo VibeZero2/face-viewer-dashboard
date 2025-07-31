@@ -7,7 +7,23 @@
     /* Fix for variable selector text color */
     select.form-select,
     select.form-select option {
-        color: white !important;
+        color: #fff !important;
+        background-color: #222 !important;
+    }
+    
+    /* Ensure dropdown options are visible */
+    select.form-select option {
+        background-color: #333 !important;
+        color: #fff !important;
+    }
+    
+    /* Style for error messages */
+    .analysis-error {
+        background-color: #f8d7da;
+        color: #721c24;
+        padding: 1rem;
+        border-radius: 0.25rem;
+        margin-bottom: 1rem;
     }
 </style>
 {% endblock %}
@@ -88,10 +104,14 @@
                                 </div>
                                 
                                 <div class="mb-3">
-                                    <label class="form-label">Variables</label>
-                                    <div id="variableSelectors">
-                                        <!-- Variable selectors will be added dynamically -->
-                                    </div>
+                                    <label for="analysisVariable" class="form-label">Variable</label>
+                                    <select class="form-select bg-dark" id="analysisVariable" required>
+                                        <option value="" selected disabled>Select variable...</option>
+                                        {% for variable in available_variables %}
+                                        <option value="{{ variable }}">{{ variable }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text text-light" id="variableDescription"></div>
                                 </div>
                                 
                                 <button type="submit" class="btn btn-warning">Run Analysis</button>
@@ -105,22 +125,26 @@
                         <div class="card-header bg-warning text-dark">
                             <h5 class="mb-0">Analysis Results</h5>
                         </div>
-                        <div class="card-body">
-                            <div id="analysisResults">
-                                <div class="text-center text-muted">
-                                    <p>Select an analysis type and run it to see results</p>
-                                </div>
+                        <div class="card-body" id="analysisResults">
+                            {% if error_message %}
+                            <div class="analysis-error">
+                                <strong>Error:</strong> {{ error_message }}
                             </div>
-                            <div id="resultsLoading" class="text-center d-none">
-                                <div class="spinner-border text-warning" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                                <p class="mt-2">Running analysis...</p>
+                            {% else %}
+                            <div class="text-center">
+                                <p class="text-muted">Run an analysis to see results</p>
                             </div>
+                            {% endif %}
                         </div>
-                        <div class="card-footer">
-                            <button id="downloadResults" class="btn btn-outline-warning" disabled>Download Results</button>
+                        <div id="resultsLoading" class="text-center d-none">
+                            <div class="spinner-border text-warning" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Running analysis...</p>
                         </div>
+                    </div>
+                    <div class="card-footer">
+                        <button id="downloadResults" class="btn btn-outline-warning" disabled>Download Results</button>
                     </div>
                 </div>
             </div>
@@ -483,80 +507,73 @@
         
         // Update analysis description when type changes
         document.getElementById('analysisType').addEventListener('change', function() {
-            const description = analysisDescriptions[this.value] || '';
-            document.getElementById('analysisDescription').textContent = description;
+            const analysisType = this.value;
+            const variableSelect = document.getElementById('analysisVariable');
             
-            // Update variable selectors based on analysis type
-            updateVariableSelectors(this.value);
+            // Filter variables based on analysis type
+            if (analysisType) {
+                // Find the selected analysis type object
+                const selectedAnalysis = {{ available_analyses|tojson|safe }}.find(a => a.id === analysisType);
+                
+                if (selectedAnalysis && selectedAnalysis.variables) {
+                    // Clear current options except the first one
+                    while (variableSelect.options.length > 1) {
+                        variableSelect.remove(1);
+                    }
+                    
+                    // Add recommended variables first
+                    selectedAnalysis.variables.forEach(variable => {
+                        const availableVars = {{ available_variables|tojson|safe }};
+                        if (availableVars.includes(variable)) {
+                            const option = document.createElement('option');
+                            option.value = variable;
+                            option.text = variable + ' (Recommended)';
+                            variableSelect.add(option);
+                        }
+                    });
+                    
+                    // Add remaining variables
+                    {{ available_variables|tojson|safe }}.forEach(variable => {
+                        if (!selectedAnalysis.variables.includes(variable)) {
+                            const option = document.createElement('option');
+                            option.value = variable;
+                            option.text = variable;
+                            variableSelect.add(option);
+                        }
+                    });
+                    
+                    // Enable the variable select
+                    variableSelect.disabled = false;
+                }
+            } else {
+                // Disable the variable select if no analysis type is selected
+                variableSelect.disabled = true;
+            }
         });
         
-        // Function to update variable selectors based on analysis type
-        function updateVariableSelectors(analysisType) {
-            const container = document.getElementById('variableSelectors');
-            container.innerHTML = '';
-            
-            let numVariables = 1;
-            let labels = ['Variable'];
-            
-            if (analysisType === 'ttest' || analysisType === 'correlation') {
-                numVariables = 2;
-                labels = ['Variable 1', 'Variable 2'];
-            } else if (analysisType === 'anova' || analysisType === 'regression') {
-                numVariables = 2;
-                labels = ['Dependent Variable', 'Independent Variable'];
-            }
-            
-            for (let i = 0; i < numVariables; i++) {
-                const div = document.createElement('div');
-                div.className = 'mb-2';
-                
-                const label = document.createElement('label');
-                label.className = 'form-label';
-                label.textContent = labels[i];
-                
-                const select = document.createElement('select');
-                select.className = 'form-select bg-dark text-light';
-                select.id = `variable${i + 1}`;
-                select.required = true;
-                
-                const defaultOption = document.createElement('option');
-                defaultOption.value = '';
-                defaultOption.disabled = true;
-                defaultOption.selected = true;
-                defaultOption.textContent = 'Select variable...';
-                select.appendChild(defaultOption);
-                
-                columns.forEach(column => {
-                    const option = document.createElement('option');
-                    option.value = column.id;
-                    option.textContent = column.name;
-                    select.appendChild(option);
-                });
-                
-                div.appendChild(label);
-                div.appendChild(select);
-                container.appendChild(div);
-            }
-        }
-        
-        // Handle analysis form submission
+        // Run analysis when form is submitted
         document.getElementById('analysisForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
             const analysisType = document.getElementById('analysisType').value;
-            const variables = [];
+            const variable = document.getElementById('analysisVariable').value;
             
-            // Get selected variables
-            const selects = document.querySelectorAll('#variableSelectors select');
-            selects.forEach(select => {
-                variables.push(select.value);
-            });
+            if (!analysisType || !variable) {
+                alert('Please select both an analysis type and a variable');
+                return;
+            }
             
-            // Show loading indicator
-            document.getElementById('resultsLoading').classList.remove('d-none');
-            document.getElementById('analysisResults').classList.add('d-none');
+            // Show loading state
+            document.getElementById('analysisResults').innerHTML = `
+                <div class="text-center">
+                    <div class="spinner-border text-warning" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Running analysis...</p>
+                </div>
+            `;
             
-            // Run analysis via API
+            // Make API call to run analysis
             fetch('/api/run_analysis', {
                 method: 'POST',
                 headers: {
@@ -564,65 +581,60 @@
                 },
                 body: JSON.stringify({
                     analysis_type: analysisType,
-                    variables: variables
-                }),
+                    variable: variable
+                })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        throw new Error(err.message || 'Unknown error occurred');
+                    });
+                }
+                return response.json();
+            })
             .then(data => {
-                // Hide loading indicator
-                document.getElementById('resultsLoading').classList.add('d-none');
-                document.getElementById('analysisResults').classList.remove('d-none');
+                // Enable download button
+                document.getElementById('downloadResults').removeAttribute('disabled');
                 
                 // Display results
-                displayAnalysisResults(data);
+                const resultsContainer = document.getElementById('analysisResults');
                 
-                // Enable download button
-                document.getElementById('downloadResults').disabled = false;
+                // Build HTML for results
+                let resultsHTML = `
+                    <h4>${data.analysis_type} Results: ${data.variable}</h4>
+                    <p class="text-muted">${data.summary}</p>
+                `;
+                
+                // Add results tables if available
+                if (data.tables && data.tables.length > 0) {
+                    data.tables.forEach(table => {
+                        resultsHTML += `
+                            <h5>${table.title}</h5>
+                            <table class="table table-dark table-striped">
+                                <thead>
+                                    <tr>
+                                        ${table.headers.map(header => `<th>${header}</th>`).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${table.rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}
+                                </tbody>
+                            </table>
+                        `;
+                    });
+                }
+                
+                resultsContainer.innerHTML = resultsHTML;
             })
             .catch(error => {
                 console.error('Error:', error);
-                document.getElementById('resultsLoading').classList.add('d-none');
-                document.getElementById('analysisResults').classList.remove('d-none');
                 document.getElementById('analysisResults').innerHTML = `
-                    <div class="alert alert-danger">
-                        <h5 class="alert-heading">Error</h5>
-                        <p>An error occurred while running the analysis.</p>
+                    <div class="analysis-error">
+                        <strong>Error:</strong> ${error.message || 'An error occurred while running the analysis.'}
                     </div>
                 `;
             });
         });
-        
-        // Function to display analysis results
-        function displayAnalysisResults(data) {
-            const container = document.getElementById('analysisResults');
-            
-            let html = `
-                <h5>Analysis: ${data.analysis_type}</h5>
-                <p>Variables: ${data.variables.join(', ')}</p>
-                <hr>
-            `;
-            
-            if (data.analysis_type === 'descriptive') {
-                html += `
-                    <table class="table table-dark">
-                        <thead>
-                            <tr>
-                                <th>Statistic</th>
-                                <th>Value</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Mean</td>
-                                <td>${data.results.summary.mean}</td>
-                            </tr>
-                            <tr>
-                                <td>Median</td>
-                                <td>${data.results.summary.median}</td>
-                            </tr>
-                            <tr>
-                                <td>Minimum</td>
-                                <td>${data.results.summary.min}</td>
                             </tr>
                             <tr>
                                 <td>Maximum</td>

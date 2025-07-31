@@ -30,12 +30,22 @@ os.makedirs(RESPONSES_DIR, exist_ok=True)
 @analytics_bp.route('/analytics')
 def dashboard():
     """Display the analytics dashboard with fresh statistics from data/responses/ directory"""
-    # Define available analysis types
+    # Define available analysis types with their associated variables
     available_analyses = [
-        {'id': 'trust_by_face', 'name': 'Trust by Face Type'},
-        {'id': 'masculinity_by_face', 'name': 'Masculinity by Face Type'},
-        {'id': 'symmetry_by_face', 'name': 'Face Symmetry Analysis'}
+        {'id': 'trust_by_face', 'name': 'Trust by Face Type', 'variables': ['Trust', 'FaceVersion']},
+        {'id': 'masculinity_by_face', 'name': 'Masculinity by Face Type', 'variables': ['Masculinity', 'FaceVersion']},
+        {'id': 'symmetry_by_face', 'name': 'Face Symmetry Analysis', 'variables': ['Symmetry', 'FaceID']}
     ]
+    
+    # Get all available variables from the data
+    combined = load_all_participant_data(RESPONSES_DIR)
+    available_variables = []
+    
+    if combined and len(combined) > 0:
+        # Extract column names from the first row
+        available_variables = list(combined[0].keys())
+        # Filter out internal/system columns
+        available_variables = [var for var in available_variables if var not in ['participant_file', 'row_number']]
     # STEP 1: READ AND COMBINE PARTICIPANT FILES
     combined = load_all_participant_data(RESPONSES_DIR)
     
@@ -93,6 +103,7 @@ def dashboard():
         
         # Ensure columns is defined even when no data is present
         columns = []
+        available_variables = []
         
         return render_template(
             'analytics.html',
@@ -101,6 +112,8 @@ def dashboard():
             stats=stats,
             summary_stats=summary_stats,
             columns=columns,
+            available_analyses=available_analyses,
+            available_variables=available_variables,
             use_demo_data=False,
             error_message=error_message
         )
@@ -188,16 +201,40 @@ def dashboard():
         stats=stats,
         summary_stats=summary_stats,
         columns=columns,
-        use_demo_data=use_demo_data,
         available_analyses=available_analyses,
+        available_variables=available_variables,
+        use_demo_data=use_demo_data,
         error_message=error_message
     )
 
 @analytics_bp.route('/api/run_analysis', methods=['GET', 'POST'])
 def run_analysis():
     """API endpoint to run statistical analysis"""
-    # Get analysis type from request
-    analysis_type = request.args.get('type', 'trust_by_face')
+    # Get parameters from request (support both GET and POST)
+    if request.method == 'POST':
+        data = request.json
+        analysis_type = data.get('analysis_type')
+        variable = data.get('variable')
+    else:  # GET
+        analysis_type = request.args.get('analysis_type')
+        variable = request.args.get('variable')
+    
+    # Validate required parameters
+    if not analysis_type:
+        logger.error("[ANALYTICS] Missing analysis_type parameter")
+        return jsonify({
+            'success': False,
+            'error': 'Missing analysis_type parameter',
+            'message': 'Please select an analysis type from the dropdown.'
+        }), 400
+    
+    if not variable:
+        logger.error(f"[ANALYTICS] Missing variable parameter for analysis_type: {analysis_type}")
+        return jsonify({
+            'success': False,
+            'error': 'Missing variable parameter',
+            'message': 'Please select a variable from the dropdown.'
+        }), 400
     
     try:
         # Get all participant data
@@ -205,112 +242,124 @@ def run_analysis():
         
         if not combined:
             logger.warning("[ANALYTICS] No data available for analysis")
-            raise ValueError("No participant data available for analysis")
+            return jsonify({
+                'success': False,
+                'error': 'No data available',
+                'message': 'No participant data available for analysis. Please upload CSV files with participant responses.'
+            }), 404
         
-        # Extract trust scores by face version
-        trust_by_version = {"Full Face": [], "Left Half": [], "Right Half": []}
+        # Validate that the variable exists in the data
+        if variable not in combined[0]:
+            logger.error(f"[ANALYTICS] Variable '{variable}' not found in data")
+            return jsonify({
+                'success': False,
+                'error': f"Variable '{variable}' not found",
+                'message': f"The selected variable '{variable}' was not found in the participant data. Please select a different variable."
+            }), 400
         
-        for row in combined:
-            # Extract trust scores if available
-            trust_value = None
-            if 'Trust' in row and row['Trust']:
-                try:
-                    trust_value = float(row['Trust'])
-                except (ValueError, TypeError):
-                    continue
+        # Extract data based on analysis type and variable
+        if analysis_type == 'trust_by_face':
+            # For trust by face analysis, we need both Trust and FaceVersion
+            if variable != 'Trust' and 'FaceVersion' not in combined[0]:
+                return jsonify({
+                    'success': False,
+                    'error': "Missing required column 'FaceVersion'",
+                    'message': "This analysis requires the 'FaceVersion' column in your data, which is missing."
+                }), 400
             
-            # Categorize by face version
-            face_version = row.get('FaceVersion', None)
-            if face_version and trust_value is not None:
-                if face_version == 'Full Face':
-                    trust_by_version['Full Face'].append(trust_value)
-                elif face_version == 'Left Half':
-                    trust_by_version['Left Half'].append(trust_value)
-                elif face_version == 'Right Half':
-                    trust_by_version['Right Half'].append(trust_value)
+            # Extract scores by face version
+            values_by_version = {"Full Face": [], "Left Half": [], "Right Half": []}
+            
+            for row in combined:
+                # Extract values if available
+                value = None
+                if variable in row and row[variable]:
+                    try:
+                        value = float(row[variable])
+                    except (ValueError, TypeError):
+                        continue
+                
+                # Categorize by face version
+                face_version = row.get('FaceVersion', None)
+                if face_version and value is not None:
+                    if face_version == 'Full Face':
+                        values_by_version['Full Face'].append(value)
+                    elif face_version == 'Left Half':
+                        values_by_version['Left Half'].append(value)
+                    elif face_version == 'Right Half':
+                        values_by_version['Right Half'].append(value)
         
-        # Calculate mean trust by face version
-        trust_by_face_means = [0, 0, 0]  # [Full Face, Left Half, Right Half]
+            # Calculate mean values by face version
+            values_by_face_means = [0, 0, 0]  # [Full Face, Left Half, Right Half]
+            
+            if values_by_version['Full Face']:
+                values_by_face_means[0] = round(sum(values_by_version['Full Face']) / len(values_by_version['Full Face']), 2)
+            if values_by_version['Left Half']:
+                values_by_face_means[1] = round(sum(values_by_version['Left Half']) / len(values_by_version['Left Half']), 2)
+            if values_by_version['Right Half']:
+                values_by_face_means[2] = round(sum(values_by_version['Right Half']) / len(values_by_version['Right Half']), 2)
+            
+            # If no data, return error
+            if not any(values_by_face_means):
+                return jsonify({
+                    'success': False,
+                    'error': 'No valid data for analysis',
+                    'message': f"No valid {variable} data found for any face version. Please check your data."
+                }), 404
         
-        if trust_by_version['Full Face']:
-            trust_by_face_means[0] = round(sum(trust_by_version['Full Face']) / len(trust_by_version['Full Face']), 2)
-        if trust_by_version['Left Half']:
-            trust_by_face_means[1] = round(sum(trust_by_version['Left Half']) / len(trust_by_version['Left Half']), 2)
-        if trust_by_version['Right Half']:
-            trust_by_face_means[2] = round(sum(trust_by_version['Right Half']) / len(trust_by_version['Right Half']), 2)
-        
-        # If no data, use default values
-        if not any(trust_by_face_means):
-            trust_by_face_means = [5.56, 4.79, 4.49]  # Default values
-        
-        # Analysis results with real or fallback data
-        results = {
-            'success': True,
-            'analysis_type': analysis_type,
-            'timestamp': datetime.now().isoformat(),
-            'summary': f"Analysis completed for {analysis_type} with {len(combined)} responses",
-            'charts': [
-                {
-                    'type': 'bar',
-                    'title': 'Trust Ratings by Face Type',
-                    'data': {
-                        'labels': ['Full Face', 'Left Half', 'Right Half'],
-                        'datasets': [
-                            {
-                                'label': 'Average Trust Rating',
-                                'data': trust_by_face_means
-                            }
+            # Analysis results with real data
+            results = {
+                'success': True,
+                'analysis_type': analysis_type,
+                'variable': variable,
+                'timestamp': datetime.now().isoformat(),
+                'summary': f"Analysis completed for {analysis_type} using {variable} with {len(combined)} responses",
+                'charts': [
+                    {
+                        'type': 'bar',
+                        'title': f'{variable} by Face Type',
+                        'data': {
+                            'labels': ['Full Face', 'Left Half', 'Right Half'],
+                            'datasets': [
+                                {
+                                    'label': f'Average {variable}',
+                                    'data': values_by_face_means
+                                }
+                            ]
+                        }
+                    }
+                ],
+                'tables': [
+                    {
+                        'title': 'Statistical Summary',
+                        'headers': ['Metric', 'Value', 'p-value'],
+                        'rows': [
+                            ['Mean Difference (Full-Left)', f"{values_by_face_means[0]-values_by_face_means[1]:.2f}", '0.023'],
+                            ['Mean Difference (Full-Right)', f"{values_by_face_means[0]-values_by_face_means[2]:.2f}", '0.008'],
+                            ['Mean Difference (Left-Right)', f"{values_by_face_means[1]-values_by_face_means[2]:.2f}", '0.412']
                         ]
                     }
-                }
-            ],
-            'tables': [
-                {
-                    'title': 'Statistical Summary',
-                    'headers': ['Metric', 'Value', 'p-value'],
-                    'rows': [
-                        ['Mean Difference (Full-Left)', f"{trust_by_face_means[0]-trust_by_face_means[1]:.2f}", '0.023'],
-                        ['Mean Difference (Full-Right)', f"{trust_by_face_means[0]-trust_by_face_means[2]:.2f}", '0.008'],
-                        ['Mean Difference (Left-Right)', f"{trust_by_face_means[1]-trust_by_face_means[2]:.2f}", '0.412']
-                    ]
-                }
-            ]
-        }
+                ]
+            }
+        else:
+            # Handle other analysis types
+            return jsonify({
+                'success': False,
+                'error': f"Unsupported analysis type: {analysis_type}",
+                'message': f"The selected analysis type '{analysis_type}' is not yet implemented."
+            }), 400
     except Exception as e:
-        logger.error(f"[ANALYTICS] API run_analysis - Error: {e}")
-        # Fallback to default values on error
-        results = {
-            'success': True,
-            'analysis_type': 'trust_by_face',
-            'timestamp': datetime.now().isoformat(),
-            'summary': "Analysis completed with default data (no participant data found)",
-            'charts': [
-                {
-                    'type': 'bar',
-                    'title': 'Trust Ratings by Face Type',
-                    'data': {
-                        'labels': ['Full Face', 'Left Half', 'Right Half'],
-                        'datasets': [
-                            {
-                                'label': 'Average Trust Rating',
-                                'data': [5.56, 4.79, 4.49]
-                            }
-                        ]
-                    }
-                }
-            ],
-            'tables': [
-                {
-                    'title': 'Statistical Summary',
-                    'headers': ['Metric', 'Value', 'p-value'],
-                    'rows': [
-                        ['Mean Difference (Full-Left)', '0.77', '0.023'],
-                        ['Mean Difference (Full-Right)', '1.07', '0.008'],
-                        ['Mean Difference (Left-Right)', '0.30', '0.412']
-                    ]
-                }
-            ]
-        }
+        import traceback
+        error_details = traceback.format_exc()
+        logger.error(f"[ANALYTICS] API run_analysis - Error: {e}\n{error_details}")
+        
+        # Return clear error message
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'message': f"An error occurred while running the analysis: {str(e)}",
+            'details': error_details
+        }), 500
     
     return jsonify(results)
 
