@@ -47,15 +47,26 @@ def upload_participant():
                 reader = csv.reader(f)
                 headers = next(reader, [])
                 if not headers:
-                    flash('Warning: Uploaded CSV has no headers', 'warning')
+                    # Delete the file and reject the upload
+                    os.remove(save_path)
+                    flash('Error: Uploaded CSV has no headers. Upload rejected.', 'danger')
+                    logger.error(f"Rejected upload of {filename} - no headers")
+                    return redirect(url_for('dashboard.dashboard'))
                 elif "Participant ID" not in headers and "ParticipantID" not in headers:
-                    flash('Warning: CSV missing required Participant ID column', 'warning')
-                    logger.warning(f"Uploaded file {filename} missing required 'Participant ID' column")
+                    # Delete the file and reject the upload
+                    os.remove(save_path)
+                    flash('Error: CSV must have a "Participant ID" or "ParticipantID" column. Upload rejected.', 'danger')
+                    logger.error(f"Rejected upload of {filename} - missing required 'Participant ID' column")
+                    return redirect(url_for('dashboard.dashboard'))
                 else:
                     logger.info(f"Successfully validated headers for {filename}")
         except Exception as e:
+            # Delete the file on error
+            if os.path.exists(save_path):
+                os.remove(save_path)
             logger.error(f"Error validating CSV headers for {filename}: {e}")
-            flash(f'Warning: Could not validate CSV format: {str(e)}', 'warning')
+            flash(f'Error: Could not validate CSV format: {str(e)}. Upload rejected.', 'danger')
+            return redirect(url_for('dashboard.dashboard'))
         
         flash(f'Participant file "{filename}" uploaded successfully')
     else:
