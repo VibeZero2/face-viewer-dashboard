@@ -2,6 +2,16 @@
 
 {% block title %}{{ title }}{% endblock %}
 
+{% block head %}
+<style>
+    /* Fix for variable selector text color */
+    select.form-select,
+    select.form-select option {
+        color: white !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid mt-4">
     <h1 class="mb-4">Face Perception Analytics</h1>
