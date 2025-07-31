@@ -30,6 +30,12 @@ os.makedirs(RESPONSES_DIR, exist_ok=True)
 @analytics_bp.route('/analytics')
 def dashboard():
     """Display the analytics dashboard with fresh statistics from data/responses/ directory"""
+    # Define available analysis types
+    available_analyses = [
+        {'id': 'trust_by_face', 'name': 'Trust by Face Type'},
+        {'id': 'masculinity_by_face', 'name': 'Masculinity by Face Type'},
+        {'id': 'symmetry_by_face', 'name': 'Face Symmetry Analysis'}
+    ]
     # STEP 1: READ AND COMBINE PARTICIPANT FILES
     combined = load_all_participant_data(RESPONSES_DIR)
     
@@ -171,7 +177,7 @@ def dashboard():
     # Extract column names from the first participant if available
     columns = []
     if unique_participants and len(unique_participants) > 0:
-        columns = list(unique_participants[0].keys())
+        columns = list(combined[0].keys()) if combined else []
     
     logger.info(f"[ANALYTICS] Rendering analytics with {len(unique_participants)} participants, {stats['total_responses']} responses")
     
@@ -183,6 +189,7 @@ def dashboard():
         summary_stats=summary_stats,
         columns=columns,
         use_demo_data=use_demo_data,
+        available_analyses=available_analyses,
         error_message=error_message
     )
 
