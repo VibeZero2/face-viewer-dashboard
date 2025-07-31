@@ -1,13 +1,19 @@
 import os
 import csv
 import random
+import logging
 from datetime import datetime, timedelta
 from flask import Blueprint, request, redirect, url_for, flash, current_app, jsonify
 from werkzeug.utils import secure_filename
+from utils.data_loader import RESPONSES_DIR
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 admin_tools = Blueprint('admin_tools', __name__)
 
-UPLOAD_FOLDER = 'data/responses'
+# Use the consistent directory path from data_loader
+UPLOAD_FOLDER = RESPONSES_DIR
 ALLOWED_EXTENSIONS = {'csv'}
 
 def allowed_file(filename):
@@ -34,6 +40,23 @@ def upload_participant():
         
         save_path = os.path.join(UPLOAD_FOLDER, filename)
         file.save(save_path)
+        
+        # Validate CSV headers after saving
+        try:
+            with open(save_path, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                headers = next(reader, [])
+                if not headers:
+                    flash('Warning: Uploaded CSV has no headers', 'warning')
+                elif "Participant ID" not in headers and "ParticipantID" not in headers:
+                    flash('Warning: CSV missing required Participant ID column', 'warning')
+                    logger.warning(f"Uploaded file {filename} missing required 'Participant ID' column")
+                else:
+                    logger.info(f"Successfully validated headers for {filename}")
+        except Exception as e:
+            logger.error(f"Error validating CSV headers for {filename}: {e}")
+            flash(f'Warning: Could not validate CSV format: {str(e)}', 'warning')
+        
         flash(f'Participant file "{filename}" uploaded successfully')
     else:
         flash('Invalid file type. Please upload a CSV file.')
