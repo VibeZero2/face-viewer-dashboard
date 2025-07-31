@@ -133,10 +133,18 @@ def dashboard():
             version_key = version.replace(' ', '_')
             stats['trust_by_version'][version_key] = round(sum(scores) / len(scores), 2)
     
+    # Calculate mean and std dev for trust scores
+    if trust_scores:
+        stats['trust_mean'] = round(statistics.mean(trust_scores), 2)
+        stats['trust_std'] = round(statistics.stdev(trust_scores), 2) if len(trust_scores) > 1 else 0.00
+    else:
+        stats['trust_mean'] = 0.00
+        stats['trust_std'] = 0.00
+    
     stats['total_responses'] = len(combined)
     stats['total_participants'] = len(unique_participants)
     
-    # Format stats for template
+    # Format stats for template - keep both formats for backward compatibility
     summary_stats = {
         'total_participants': stats.get('total_participants', 0),
         'total_responses': stats.get('total_responses', 0),
@@ -229,10 +237,14 @@ def dashboard():
     return render_template(
         'dashboard.html',
         title='Face Viewer Dashboard',
-        summary_stats=summary_stats,
+        stats=stats,  # Pass the stats directly to match template expectations
+        summary_stats=summary_stats,  # Keep for backward compatibility
         participants=unique_participants,
         responses=combined,
         total_responses=len(combined),
+        total_participants=len(unique_participants),
+        avg_trust=stats['trust_mean'],
+        std_trust=stats['trust_std'],
         recent_activity=[],
         trust_distribution=trust_distribution,
         trust_boxplot=trust_boxplot,

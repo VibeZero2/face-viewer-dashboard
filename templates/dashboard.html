@@ -9,7 +9,7 @@
             <div class="card-body">
                 <h6 class="card-title text-muted">Total Participants</h6>
                 <h2 class="card-text fw-bold">
-                    {% if stats and stats.total_participants is defined %}{{ stats.total_participants }}{% else %}0{% endif %}
+                    {{ total_participants }}
                 </h2>
             </div>
         </div>
@@ -19,7 +19,7 @@
             <div class="card-body">
                 <h6 class="card-title text-muted">Total Responses</h6>
                 <h2 class="card-text fw-bold">
-                    {% if stats and stats.total_responses is defined %}{{ stats.total_responses }}{% else %}0{% endif %}
+                    {{ total_responses }}
                 </h2>
             </div>
         </div>
@@ -29,7 +29,7 @@
             <div class="card-body">
                 <h6 class="card-title text-muted">Average Trust Rating</h6>
                 <h2 class="card-text fw-bold">
-                    {% if stats and stats.trust_mean is defined %}{{ stats.trust_mean }}{% else %}0.00{% endif %}
+                    {{ avg_trust }}
                 </h2>
             </div>
         </div>
@@ -39,7 +39,7 @@
             <div class="card-body">
                 <h6 class="card-title text-muted">Trust Rating Std Dev</h6>
                 <h2 class="card-text fw-bold">
-                    {% if stats and stats.trust_std is defined %}{{ stats.trust_std }}{% else %}0.00{% endif %}
+                    {{ std_trust }}
                 </h2>
             </div>
         </div>
