@@ -195,16 +195,41 @@
 
 {% block scripts %}
 <script>
-// Trust Distribution Chart
-const trustDistributionCtx = document.getElementById('trustDistributionChart').getContext('2d');
-const trustDistributionChart = new Chart(trustDistributionCtx, {
+// Get chart data from backend
+let trustRatingsData = {};
+let symmetryChartData = {};
+let masculinityChartData = {};
+let trustDistributionData = {};
+let trustBoxplotData = {};
+let trustHistogramData = {};
+
+// Parse JSON data from backend
+try {
+    trustRatingsData = JSON.parse('{{ trust_ratings_json | safe }}');
+    symmetryChartData = JSON.parse('{{ symmetry_chart_json | safe }}');
+    masculinityChartData = JSON.parse('{{ masculinity_chart_json | safe }}');
+    trustDistributionData = JSON.parse('{{ trust_distribution_json | safe }}');
+    trustBoxplotData = JSON.parse('{{ trust_boxplot_json | safe }}');
+    trustHistogramData = JSON.parse('{{ trust_histogram_json | safe }}');
+} catch (e) {
+    console.error('Error parsing chart data:', e);
+    // Set default empty data structures
+    trustRatingsData = { labels: [], datasets: [{ label: 'Trust Ratings', data: [] }] };
+    symmetryChartData = { labels: [], datasets: [{ label: 'Symmetry Score', data: [] }] };
+    masculinityChartData = { labels: [], datasets: [{ label: 'Left Side', data: [] }, { label: 'Right Side', data: [] }] };
+    trustDistributionData = { data: { labels: [], datasets: [{ label: 'Trust by Face Type', data: [] }] } };
+}
+
+// Trust by Face Type Chart
+const trustByFaceCtx = document.getElementById('trustByFaceChart').getContext('2d');
+const trustByFaceChart = new Chart(trustByFaceCtx, {
     type: 'bar',
-    data: {
-        labels: ['1', '2', '3', '4', '5', '6', '7'],
+    data: trustDistributionData.data || {
+        labels: ['Full Face', 'Left Half', 'Right Half'],
         datasets: [{
-            label: 'Trust Ratings',
-            data: [10, 15, 19, 16, 7, 9, 24],
-            backgroundColor: '#f9e076'
+            label: 'Average Trust Rating',
+            data: [0, 0, 0],
+            backgroundColor: ['#3366cc', '#dc3912', '#ff9900']
         }]
     },
     options: {
@@ -241,15 +266,8 @@ const symmetryCtx = document.getElementById('symmetryChart').getContext('2d');
 const symmetryChart = new Chart(symmetryCtx, {
     type: 'line',
     data: {
-        labels: ['Face 1', 'Face 2', 'Face 3', 'Face 4', 'Face 5', 'Face 6', 'Face 7', 'Face 8', 'Face 9', 'Face 10'],
-        datasets: [{
-            label: 'Symmetry Score',
-            data: [0.8, 0.75, 0.82, 0.9, 0.78, 0.85, 0.79, 0.81, 0.76, 0.83],
-            borderColor: '#8bb9ff',
-            backgroundColor: 'rgba(139, 185, 255, 0.2)',
-            tension: 0.1,
-            pointRadius: 4
-        }]
+        labels: symmetryChartData.labels,
+        datasets: symmetryChartData.datasets
     },
     options: {
         responsive: true,
@@ -283,19 +301,8 @@ const masculinityCtx = document.getElementById('masculinityChart').getContext('2
 const masculinityChart = new Chart(masculinityCtx, {
     type: 'bar',
     data: {
-        labels: ['Face 1', 'Face 2', 'Face 3', 'Face 4', 'Face 5', 'Face 6', 'Face 7', 'Face 8', 'Face 9', 'Face 10'],
-        datasets: [
-            {
-                label: 'Left Side',
-                data: [0.65, 0.72, 0.58, 0.68, 0.75, 0.62, 0.70, 0.64, 0.69, 0.73],
-                backgroundColor: '#f8a5a5'
-            },
-            {
-                label: 'Right Side',
-                data: [0.72, 0.68, 0.63, 0.75, 0.70, 0.67, 0.69, 0.71, 0.66, 0.74],
-                backgroundColor: '#a5d6a7'
-            }
-        ]
+        labels: masculinityChartData.labels,
+        datasets: masculinityChartData.datasets
     },
     options: {
         responsive: true,
