@@ -104,11 +104,12 @@
                             <form id="analysisForm">
                                 <div class="mb-3">
                                     <label for="analysisType" class="form-label">Analysis Type</label>
-                                    <select class="form-select bg-dark text-light" id="analysisType" required>
-                                        <option value="" selected disabled>Select analysis...</option>
+                                    <select id="analysisType" name="analysis_type" class="form-select bg-dark text-light" required>
+                                        <option value="" selected disabled>Select Analysis Type</option>
                                         {% for analysis in available_analyses %}
                                         <option value="{{ analysis.id }}">{{ analysis.name }}</option>
                                         {% endfor %}
+                                        <option value="test">Test Analysis (Demo)</option>
                                     </select>
                                     <div class="form-text text-light" id="analysisDescription"></div>
                                 </div>
@@ -609,10 +610,20 @@
                 // Display results
                 const resultsContainer = document.getElementById('analysisResults');
                 
+                // Check if there's an error in the response
+                if (data.error || !data.success) {
+                    resultsContainer.innerHTML = `
+                        <div class="analysis-error">
+                            <strong>Error:</strong> ${data.message || data.error || 'An unknown error occurred'}
+                        </div>
+                    `;
+                    return;
+                }
+                
                 // Build HTML for results
                 let resultsHTML = `
                     <h4>${data.analysis_type} Results: ${data.variable}</h4>
-                    <p class="text-muted">${data.summary}</p>
+                    <p class="text-light">${data.summary}</p>
                 `;
                 
                 // Add results tables if available
@@ -634,7 +645,72 @@
                     });
                 }
                 
-                resultsContainer.innerHTML = resultsHTML;
+                // Add charts if available
+                if (data.charts && data.charts.length > 0) {
+                    data.charts.forEach((chart, index) => {
+                        // Create container for chart
+                        const chartDiv = document.createElement('div');
+                        chartDiv.className = 'mb-4';
+                        chartDiv.style.height = '300px';
+                        
+                        // Create canvas for chart
+                        const canvas = document.createElement('canvas');
+                        canvas.id = `chart-${index}`;
+                        chartDiv.appendChild(canvas);
+                        
+                        // Add to results HTML
+                        resultsHTML += `<div id="chart-container-${index}" class="mb-4"></div>`;
+                        
+                        // Update DOM first
+                        resultsContainer.innerHTML = resultsHTML;
+                        
+                        // Then create charts
+                        document.getElementById(`chart-container-${index}`).appendChild(chartDiv);
+                        
+                        // Create chart
+                        new Chart(canvas, {
+                            type: chart.type || 'bar',
+                            data: chart.data,
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    title: {
+                                        display: true,
+                                        text: chart.title || '',
+                                        color: '#ffffff'
+                                    },
+                                    legend: {
+                                        labels: {
+                                            color: '#ffffff'
+                                        }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        ticks: {
+                                            color: '#ffffff'
+                                        },
+                                        grid: {
+                                            color: 'rgba(255, 255, 255, 0.1)'
+                                        }
+                                    },
+                                    x: {
+                                        ticks: {
+                                            color: '#ffffff'
+                                        },
+                                        grid: {
+                                            color: 'rgba(255, 255, 255, 0.1)'
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    });
+                } else {
+                    // If no charts, just update the results container
+                    resultsContainer.innerHTML = resultsHTML;
+                }
             })
             .catch(error => {
                 console.error('Error:', error);

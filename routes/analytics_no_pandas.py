@@ -237,6 +237,43 @@ def run_analysis():
         }), 400
     
     try:
+        # For testing purposes, return dummy data if analysis_type is 'test'
+        if analysis_type == 'test':
+            logger.info("[ANALYTICS] Returning test data for analysis_type='test'")
+            return jsonify({
+                'success': True,
+                'analysis_type': 'Test Analysis',
+                'variable': variable or 'Test Variable',
+                'timestamp': datetime.now().isoformat(),
+                'summary': 'This is a test analysis with dummy data for demonstration purposes.',
+                'charts': [
+                    {
+                        'type': 'bar',
+                        'title': 'Test Chart',
+                        'data': {
+                            'labels': ['Group A', 'Group B', 'Group C'],
+                            'datasets': [
+                                {
+                                    'label': 'Test Values',
+                                    'data': [4.5, 3.8, 5.2]
+                                }
+                            ]
+                        }
+                    }
+                ],
+                'tables': [
+                    {
+                        'title': 'Test Results',
+                        'headers': ['Group', 'Value', 'p-value'],
+                        'rows': [
+                            ['Group A', '4.5', '0.023'],
+                            ['Group B', '3.8', '0.008'],
+                            ['Group C', '5.2', '0.412']
+                        ]
+                    }
+                ]
+            })
+        
         # Get all participant data
         combined = load_all_participant_data(RESPONSES_DIR)
         
