@@ -105,6 +105,17 @@
     </div>
 </div>
 
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-white">Femininity Scores by Face Side</div>
+            <div class="card-body">
+                <canvas id="femininityChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Admin Tools Section -->
 <div class="card mt-4 mb-4">
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
@@ -199,39 +210,48 @@
 let trustRatingsData = {};
 let symmetryChartData = {};
 let masculinityChartData = {};
+let femininityChartData = {};
 let trustDistributionData = {};
 let trustBoxplotData = {};
 let trustHistogramData = {};
 
+// Raw data from backend
+let trustHist = {};
+let avgSymmetry = {};
+let avgMasc = {};
+let avgFem = {};
+
 // Parse JSON data from backend
 try {
+    // Parse chart data
     trustRatingsData = JSON.parse('{{ trust_ratings_json | safe }}');
     symmetryChartData = JSON.parse('{{ symmetry_chart_json | safe }}');
     masculinityChartData = JSON.parse('{{ masculinity_chart_json | safe }}');
+    femininityChartData = JSON.parse('{{ femininity_chart_json | safe }}');
     trustDistributionData = JSON.parse('{{ trust_distribution_json | safe }}');
     trustBoxplotData = JSON.parse('{{ trust_boxplot_json | safe }}');
     trustHistogramData = JSON.parse('{{ trust_histogram_json | safe }}');
+    
+    // Parse raw data
+    trustHist = JSON.parse('{{ trust_hist | safe }}');
+    avgSymmetry = JSON.parse('{{ avg_symmetry | safe }}');
+    avgMasc = JSON.parse('{{ avg_masc | safe }}');
+    avgFem = JSON.parse('{{ avg_fem | safe }}');
 } catch (e) {
     console.error('Error parsing chart data:', e);
     // Set default empty data structures
     trustRatingsData = { labels: [], datasets: [{ label: 'Trust Ratings', data: [] }] };
     symmetryChartData = { labels: [], datasets: [{ label: 'Symmetry Score', data: [] }] };
-    masculinityChartData = { labels: [], datasets: [{ label: 'Left Side', data: [] }, { label: 'Right Side', data: [] }] };
+    masculinityChartData = { labels: [], datasets: [{ label: 'Avg. Masculinity Score', data: [] }] };
+    femininityChartData = { labels: [], datasets: [{ label: 'Avg. Femininity Score', data: [] }] };
     trustDistributionData = { data: { labels: [], datasets: [{ label: 'Trust by Face Type', data: [] }] } };
 }
 
-// Trust by Face Type Chart
-const trustByFaceCtx = document.getElementById('trustByFaceChart').getContext('2d');
-const trustByFaceChart = new Chart(trustByFaceCtx, {
+// Trust Distribution Chart
+const trustDistCtx = document.getElementById('trustDistributionChart').getContext('2d');
+const trustDistChart = new Chart(trustDistCtx, {
     type: 'bar',
-    data: trustDistributionData.data || {
-        labels: ['Full Face', 'Left Half', 'Right Half'],
-        datasets: [{
-            label: 'Average Trust Rating',
-            data: [0, 0, 0],
-            backgroundColor: ['#3366cc', '#dc3912', '#ff9900']
-        }]
-    },
+    data: trustRatingsData,
     options: {
         responsive: true,
         plugins: {
@@ -265,10 +285,7 @@ const trustByFaceChart = new Chart(trustByFaceCtx, {
 const symmetryCtx = document.getElementById('symmetryChart').getContext('2d');
 const symmetryChart = new Chart(symmetryCtx, {
     type: 'line',
-    data: {
-        labels: symmetryChartData.labels,
-        datasets: symmetryChartData.datasets
-    },
+    data: symmetryChartData,
     options: {
         responsive: true,
         plugins: {
@@ -283,8 +300,7 @@ const symmetryChart = new Chart(symmetryCtx, {
                     display: true,
                     text: 'Symmetry Score'
                 },
-                min: 0,
-                max: 1
+                beginAtZero: true
             },
             x: {
                 title: {
@@ -300,16 +316,13 @@ const symmetryChart = new Chart(symmetryCtx, {
 const masculinityCtx = document.getElementById('masculinityChart').getContext('2d');
 const masculinityChart = new Chart(masculinityCtx, {
     type: 'bar',
-    data: {
-        labels: masculinityChartData.labels,
-        datasets: masculinityChartData.datasets
-    },
+    data: masculinityChartData,
     options: {
         responsive: true,
         plugins: {
             title: {
                 display: true,
-                text: 'Masculinity Scores by Face Side'
+                text: 'Masculinity Scores by Face Version'
             }
         },
         scales: {
@@ -318,13 +331,43 @@ const masculinityChart = new Chart(masculinityCtx, {
                     display: true,
                     text: 'Masculinity Score'
                 },
-                min: 0,
-                max: 1
+                beginAtZero: true
             },
             x: {
                 title: {
                     display: true,
-                    text: 'Face ID'
+                    text: 'Face Version'
+                }
+            }
+        }
+    }
+});
+
+// Femininity Chart
+const femininityCtx = document.getElementById('femininityChart').getContext('2d');
+const femininityChart = new Chart(femininityCtx, {
+    type: 'bar',
+    data: femininityChartData,
+    options: {
+        responsive: true,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Femininity Scores by Face Version'
+            }
+        },
+        scales: {
+            y: {
+                title: {
+                    display: true,
+                    text: 'Femininity Score'
+                },
+                beginAtZero: true
+            },
+            x: {
+                title: {
+                    display: true,
+                    text: 'Face Version'
                 }
             }
         }

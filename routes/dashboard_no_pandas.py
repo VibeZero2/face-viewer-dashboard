@@ -96,6 +96,16 @@ def dashboard():
     trust_scores = []
     trust_by_version = {"Full Face": [], "Left Half": [], "Right Half": []}
     
+    # Trust Rating Distribution (ratings 1-7)
+    trust_hist = {str(i): 0 for i in range(1, 8)}
+    
+    # Face Symmetry Scores (average per FaceNumber)
+    symmetry_scores = {}
+    
+    # Masculinity & Femininity Scores by Face Side
+    masc = {"Full Face": [], "Left Half": [], "Right Half": []}
+    fem = {"Full Face": [], "Left Half": [], "Right Half": []}
+    
     for row in combined:
         # Extract trust scores if available (handle different column naming conventions)
         trust_value = None
@@ -103,18 +113,52 @@ def dashboard():
             try:
                 trust_value = float(row['Trust'])
                 trust_scores.append(trust_value)
+                
+                # Add to trust histogram
+                rating = int(round(trust_value))
+                if 1 <= rating <= 7:
+                    trust_hist[str(rating)] += 1
             except (ValueError, TypeError):
                 pass
         
         # Categorize by face version
         face_version = row.get('FaceVersion', None)
-        if face_version and trust_value is not None:
-            if face_version == 'Full Face':
-                trust_by_version['Full Face'].append(trust_value)
-            elif face_version == 'Left Half':
-                trust_by_version['Left Half'].append(trust_value)
-            elif face_version == 'Right Half':
-                trust_by_version['Right Half'].append(trust_value)
+        if face_version:
+            # Trust by face version
+            if trust_value is not None:
+                if face_version == 'Full Face':
+                    trust_by_version['Full Face'].append(trust_value)
+                elif face_version == 'Left Half':
+                    trust_by_version['Left Half'].append(trust_value)
+                elif face_version == 'Right Half':
+                    trust_by_version['Right Half'].append(trust_value)
+            
+            # Masculinity by face version
+            if 'Masculinity' in row and row['Masculinity']:
+                try:
+                    masc_value = float(row['Masculinity'])
+                    masc[face_version].append(masc_value)
+                except (ValueError, TypeError):
+                    pass
+            
+            # Femininity by face version
+            if 'Femininity' in row and row['Femininity']:
+                try:
+                    fem_value = float(row['Femininity'])
+                    fem[face_version].append(fem_value)
+                except (ValueError, TypeError):
+                    pass
+        
+        # Face symmetry scores by face number
+        face_id = row.get('FaceNumber', row.get('FaceID', None))
+        if face_id and 'Symmetry' in row and row['Symmetry']:
+            try:
+                sym_value = float(row['Symmetry'])
+                if face_id not in symmetry_scores:
+                    symmetry_scores[face_id] = []
+                symmetry_scores[face_id].append(sym_value)
+            except (ValueError, TypeError):
+                pass
     
     # Calculate statistics
     if trust_scores:
@@ -320,27 +364,73 @@ def dashboard():
     symmetry_chart_json = json.dumps(symmetry_chart)
     masculinity_chart_json = json.dumps(masculinity_chart)
     
-    # Create trust rating distribution data (1-7 scale)
-    trust_ratings_dist = [0, 0, 0, 0, 0, 0, 0]  # Initialize counts for ratings 1-7
-    for row in combined:
-        if 'Trust' in row and row['Trust']:
-            try:
-                rating = int(float(row['Trust']))
-                if 1 <= rating <= 7:
-                    trust_ratings_dist[rating-1] += 1
-            except (ValueError, TypeError):
-                pass
-    
+    # Calculate averages for all collected data
+    # Trust histogram (already calculated above)
     trust_ratings_chart = {
-        'labels': ['1', '2', '3', '4', '5', '6', '7'],
+        'labels': list(trust_hist.keys()),
         'datasets': [{
             'label': 'Trust Ratings',
-            'data': trust_ratings_dist,
+            'data': list(trust_hist.values()),
             'backgroundColor': '#f9e076'
         }]
     }
     
+    # Calculate average symmetry scores per face
+    avg_symmetry = {}
+    for face_id, scores in symmetry_scores.items():
+        if scores:
+            avg_symmetry[face_id] = round(statistics.mean(scores), 2)
+    
+    symmetry_chart = {
+        'labels': list(avg_symmetry.keys()),
+        'datasets': [{
+            'label': 'Symmetry Score',
+            'data': list(avg_symmetry.values()),
+            'borderColor': '#8bb9ff',
+            'backgroundColor': 'rgba(139, 185, 255, 0.2)',
+            'tension': 0.1
+        }]
+    }
+    
+    # Calculate average masculinity scores per face version
+    avg_masc = {}
+    for version, scores in masc.items():
+        if scores:
+            avg_masc[version] = round(statistics.mean(scores), 2)
+        else:
+            avg_masc[version] = 0
+    
+    masculinity_chart = {
+        'labels': list(avg_masc.keys()),
+        'datasets': [{
+            'label': 'Avg. Masculinity Score',
+            'data': list(avg_masc.values()),
+            'backgroundColor': '#6EC6CA'
+        }]
+    }
+    
+    # Calculate average femininity scores per face version
+    avg_fem = {}
+    for version, scores in fem.items():
+        if scores:
+            avg_fem[version] = round(statistics.mean(scores), 2)
+        else:
+            avg_fem[version] = 0
+    
+    femininity_chart = {
+        'labels': list(avg_fem.keys()),
+        'datasets': [{
+            'label': 'Avg. Femininity Score',
+            'data': list(avg_fem.values()),
+            'backgroundColor': '#F78CA2'
+        }]
+    }
+    
+    # Serialize all chart data to JSON
     trust_ratings_json = json.dumps(trust_ratings_chart)
+    symmetry_chart_json = json.dumps(symmetry_chart)
+    masculinity_chart_json = json.dumps(masculinity_chart)
+    femininity_chart_json = json.dumps(femininity_chart)
     
     return render_template(
         'dashboard.html',
@@ -354,7 +444,7 @@ def dashboard():
         avg_trust=stats['trust_mean'],
         std_trust=stats['trust_std'],
         recent_activity=[],
-        # Original chart data structures
+        # Original chart data structures (keep for backward compatibility)
         trust_distribution=trust_distribution,
         trust_boxplot=trust_boxplot,
         trust_histogram=trust_histogram,
@@ -364,7 +454,13 @@ def dashboard():
         trust_histogram_json=trust_histogram_json,
         symmetry_chart_json=symmetry_chart_json,
         masculinity_chart_json=masculinity_chart_json,
+        femininity_chart_json=femininity_chart_json,  # New femininity chart data
         trust_ratings_json=trust_ratings_json,
+        # Pass raw data for additional processing if needed
+        trust_hist=json.dumps(trust_hist),
+        avg_symmetry=json.dumps(avg_symmetry),
+        avg_masc=json.dumps(avg_masc),
+        avg_fem=json.dumps(avg_fem),
         error_message=error_message,
         use_demo_data=use_demo_data,
         data_file_exists=data_file_exists
