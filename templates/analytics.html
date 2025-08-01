@@ -4,27 +4,29 @@
 
 {% block head %}
 <style>
-    /* Fix for variable selector text color */
+    /* Fix for variable selector text color - ensure ALL dropdowns are visible */
     select.form-select,
-    select.form-select option {
-        color: #fff !important;
+    select.form-select option,
+    .form-select,
+    .form-select option {
+        color: white !important;
         background-color: #222 !important;
     }
     
-    /* Ensure dropdown options are visible */
-    select.form-select option {
+    /* Ensure dropdown options are visible and high contrast */
+    select.form-select option,
+    .form-select option {
         background-color: #333 !important;
-        color: #fff !important;
+        color: white !important;
+        text-shadow: 0 0 1px rgba(255,255,255,0.5);
     }
     
-    /* Fix for secondary variable dropdown text color */
-    #analysisVariable {
-        color: #fff !important;
-    }
-    
-    /* Fix for dropdown text color in all states */
-    .form-select {
-        color: #fff !important;
+    /* Fix for secondary variable dropdown text color with increased visibility */
+    #analysisVariable,
+    #analysisType,
+    #analysisSecondaryVariable {
+        color: white !important;
+        font-weight: 500;
     }
     
     /* Style for error messages */
@@ -34,6 +36,13 @@
         padding: 1rem;
         border-radius: 0.25rem;
         margin-bottom: 1rem;
+    }
+    
+    /* Ensure dropdown text is always visible */
+    .form-select:focus,
+    .form-select:hover {
+        color: white !important;
+        background-color: #444 !important;
     }
 </style>
 {% endblock %}
@@ -524,7 +533,19 @@
             // Filter variables based on analysis type
             if (analysisType) {
                 // Find the selected analysis type object
-                const selectedAnalysis = {{ available_analyses|tojson|safe }}.find(a => a.id === analysisType);
+                var analysesData = [];
+                try {
+                    analysesData = JSON.parse('{{ available_analyses|tojson|safe }}');
+                } catch (e) {
+                    console.error('Error parsing available_analyses:', e);
+                }
+                var selectedAnalysis = null;
+                for (var i = 0; i < analysesData.length; i++) {
+                    if (analysesData[i].id === analysisType) {
+                        selectedAnalysis = analysesData[i];
+                        break;
+                    }
+                }
                 
                 if (selectedAnalysis && selectedAnalysis.variables) {
                     // Clear current options except the first one
@@ -533,25 +554,51 @@
                     }
                     
                     // Add recommended variables first
-                    selectedAnalysis.variables.forEach(variable => {
-                        const availableVars = {{ available_variables|tojson|safe }};
-                        if (availableVars.includes(variable)) {
-                            const option = document.createElement('option');
+                    var availableVars = [];
+                    try {
+                        availableVars = JSON.parse('{{ available_variables|tojson|safe }}');
+                    } catch (e) {
+                        console.error('Error parsing available_variables:', e);
+                    }
+                    
+                    for (var i = 0; i < selectedAnalysis.variables.length; i++) {
+                        var variable = selectedAnalysis.variables[i];
+                        var found = false;
+                        for (var k = 0; k < availableVars.length; k++) {
+                            if (availableVars[k] === variable) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (found) {
+                            var option = document.createElement('option');
                             option.value = variable;
                             option.text = variable + ' (Recommended)';
                             variableSelect.add(option);
                         }
-                    });
+                    }
                     
                     // Add remaining variables
-                    {{ available_variables|tojson|safe }}.forEach(variable => {
-                        if (!selectedAnalysis.variables.includes(variable)) {
-                            const option = document.createElement('option');
+                    for (var j = 0; j < availableVars.length; j++) {
+                        var variable = availableVars[j];
+                        var isRecommended = false;
+                        
+                        // Check if this variable is in the recommended list
+                        for (var m = 0; m < selectedAnalysis.variables.length; m++) {
+                            if (selectedAnalysis.variables[m] === variable) {
+                                isRecommended = true;
+                                break;
+                            }
+                        }
+                        
+                        // Only add if not recommended (those were already added)
+                        if (!isRecommended) {
+                            var option = document.createElement('option');
                             option.value = variable;
                             option.text = variable;
                             variableSelect.add(option);
                         }
-                    });
+                    }
                     
                     // Enable the variable select
                     variableSelect.disabled = false;
@@ -566,8 +613,8 @@
         document.getElementById('analysisForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            const analysisType = document.getElementById('analysisType').value;
-            const variable = document.getElementById('analysisVariable').value;
+            var analysisType = document.getElementById('analysisType').value;
+            var variable = document.getElementById('analysisVariable').value;
             
             if (!analysisType || !variable) {
                 alert('Please select both an analysis type and a variable');
@@ -575,196 +622,379 @@
             }
             
             // Show loading state
-            document.getElementById('analysisResults').innerHTML = `
-                <div class="text-center">
-                    <div class="spinner-border text-warning" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2">Running analysis...</p>
-                </div>
-            `;
+            document.getElementById('analysisResults').innerHTML = 
+                '<div class="text-center">'+
+                    '<div class="spinner-border text-warning" role="status">'+
+                        '<span class="visually-hidden">Loading...</span>'+
+                    '</div>'+
+                    '<p class="mt-2">Running analysis...</p>'+
+                '</div>';
             
             // Make API call to run analysis
             fetch('/api/run_analysis', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     analysis_type: analysisType,
                     variable: variable
                 })
             })
-            .then(response => {
+            .then(function(response) {
                 if (!response.ok) {
-                    return response.json().then(err => {
+                    return response.json().then(function(err) {
                         throw new Error(err.message || 'Unknown error occurred');
                     });
                 }
                 return response.json();
             })
-            .then(data => {
+            .then(function(data) {
                 // Enable download button
                 document.getElementById('downloadResults').removeAttribute('disabled');
                 
                 // Display results
-                const resultsContainer = document.getElementById('analysisResults');
+                var resultsContainer = document.getElementById('analysisResults');
                 
                 // Check if there's an error in the response
                 if (data.error || !data.success) {
-                    resultsContainer.innerHTML = `
-                        <div class="analysis-error">
-                            <strong>Error:</strong> ${data.message || data.error || 'An unknown error occurred'}
-                        </div>
-                    `;
+                    resultsContainer.innerHTML = 
+                        '<div class="analysis-error">'+
+                            '<strong>Error:</strong> ' + (data.message || data.error || 'An unknown error occurred') +
+                        '</div>';
                     return;
                 }
                 
-                // Build HTML for results
-                let resultsHTML = `
-                    <h4>${data.analysis_type} Results: ${data.variable}</h4>
-                    <p class="text-light">${data.summary}</p>
-                `;
-                
-                // Add results tables if available
-                if (data.tables && data.tables.length > 0) {
-                    data.tables.forEach(table => {
-                        resultsHTML += `
-                            <h5>${table.title}</h5>
-                            <table class="table table-dark table-striped">
-                                <thead>
-                                    <tr>
-                                        ${table.headers.map(header => `<th>${header}</th>`).join('')}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${table.rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('')}
-                                </tbody>
-                            </table>
-                        `;
-                    });
+                // Function to display analysis results
+                function displayAnalysisResults(data, container) {
+                    var html = '';
+                    
+                    // Add title and summary
+                    html += '<h4>' + data.analysis_type + ' Results: ' + data.variable + '</h4>';
+                    html += '<p class="text-light">' + data.summary + '</p>';
+                    
+                    // Add specific analysis results based on type
+                    if (data.analysis_type === 'descriptive') {
+                        html += renderDescriptiveStats(data);
+                    } else if (data.analysis_type === 'ttest') {
+                        html += renderTTest(data);
+                    } else if (data.analysis_type === 'anova') {
+                        html += renderAnova(data);
+                    } else if (data.analysis_type === 'correlation') {
+                        html += renderCorrelation(data);
+                    } else {
+                        // Generic fallback for unknown analysis types
+                        html += '<div class="alert alert-info">Results available for ' + data.analysis_type + '</div>';
+                    }
+                    
+                    // Add tables if available
+                    if (data.tables && data.tables.length > 0) {
+                        for (var i = 0; i < data.tables.length; i++) {
+                            var table = data.tables[i];
+                            html += '<h5>' + table.title + '</h5>';
+                            html += '<table class="table table-dark table-striped">'+
+                                    '<thead>'+
+                                        '<tr>';
+                                        
+                            // Add headers
+                            for (var j = 0; j < table.headers.length; j++) {
+                                html += '<th>' + table.headers[j] + '</th>';
+                            }
+                            
+                            html += '</tr>'+
+                                    '</thead>'+
+                                    '<tbody>';
+                                    
+                            // Add rows
+                            for (var k = 0; k < table.rows.length; k++) {
+                                var row = table.rows[k];
+                                html += '<tr>';
+                        
+                        resultsHTML += '</tr>'+
+                                '</thead>'+
+                                '<tbody>';
+                                
+                        // Add rows
+                        for (var k = 0; k < table.rows.length; k++) {
+                            var row = table.rows[k];
+                            resultsHTML += '<tr>';
+                            
+                            // Add cells
+                            for (var l = 0; l < row.length; l++) {
+                                resultsHTML += '<td>' + row[l] + '</td>';
+                            }
+                            
+                            resultsHTML += '</tr>';
+                        }
+                        
+                        resultsHTML += '</tbody>'+
+                            '</table>';
+                    }
                 }
                 
                 // Add charts if available
-                if (data.charts && data.charts.length > 0) {
-                    data.charts.forEach((chart, index) => {
-                        // Create container for chart
-                        const chartDiv = document.createElement('div');
-                        chartDiv.className = 'mb-4';
-                        chartDiv.style.height = '300px';
-                        
-                        // Create canvas for chart
-                        const canvas = document.createElement('canvas');
-                        canvas.id = `chart-${index}`;
-                        chartDiv.appendChild(canvas);
-                        
-                        // Add to results HTML
-                        resultsHTML += `<div id="chart-container-${index}" class="mb-4"></div>`;
-                        
-                        // Update DOM first
-                        resultsContainer.innerHTML = resultsHTML;
-                        
-                        // Then create charts
-                        document.getElementById(`chart-container-${index}`).appendChild(chartDiv);
-                        
-                        // Create chart
-                        new Chart(canvas, {
-                            type: chart.type || 'bar',
-                            data: chart.data,
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    title: {
-                                        display: true,
-                                        text: chart.title || '',
-                                        color: '#ffffff'
-                                    },
-                                    legend: {
-                                        labels: {
-                                            color: '#ffffff'
-                                        }
-                                    }
+                if (data.charts) {
+                    // Add chart containers
+                    resultsHTML += 
+                        '<div class="row mt-4">'+
+                            '<div class="col-md-6">'+
+                                '<div class="card bg-dark text-light mb-3">'+
+                                    '<div class="card-header">Distribution</div>'+
+                                    '<div class="card-body">'+
+                                        '<canvas id="distributionChart"></canvas>'+
+                                    '</div>'+
+                                '</div>'+
+                            '</div>'+
+                            '<div class="col-md-6">'+
+                                '<div class="card bg-dark text-light mb-3">'+
+                                    '<div class="card-header">Comparison</div>'+
+                                    '<div class="card-body">'+
+                                        '<canvas id="comparisonChart"></canvas>'+
+                                    '</div>'+
+                                '</div>'+
+                            '</div>'+
+                        '</div>';
+                    
+                    // Update results container
+                    resultsContainer.innerHTML = resultsHTML;
+                    
+                    // Initialize charts
+                    setTimeout(function() {
+                        // Distribution chart
+                        if (data.charts.distribution) {
+                            var distCtx = document.getElementById('distributionChart').getContext('2d');
+                            new Chart(distCtx, {
+                                type: 'bar',
+                                data: {
+                                    labels: data.charts.distribution.labels,
+                                    datasets: [{
+                                        label: data.charts.distribution.title || 'Distribution',
+                                        data: data.charts.distribution.data,
+                                        backgroundColor: 'rgba(255, 193, 7, 0.5)',
+                                        borderColor: 'rgba(255, 193, 7, 1)',
+                                        borderWidth: 1
+                                    }]
                                 },
-                                scales: {
-                                    y: {
-                                        ticks: {
-                                            color: '#ffffff'
+                                options: {
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true,
+                                            grid: {
+                                                color: 'rgba(255, 255, 255, 0.1)'
+                                            },
+                                            ticks: {
+                                                color: '#ffffff'
+                                            }
                                         },
-                                        grid: {
-                                            color: 'rgba(255, 255, 255, 0.1)'
+                                        x: {
+                                            grid: {
+                                                color: 'rgba(255, 255, 255, 0.1)'
+                                            },
+                                            ticks: {
+                                                color: '#ffffff'
+                                            }
                                         }
                                     },
-                                    x: {
-                                        ticks: {
-                                            color: '#ffffff'
-                                        },
-                                        grid: {
-                                            color: 'rgba(255, 255, 255, 0.1)'
+                                    plugins: {
+                                        legend: {
+                                            labels: {
+                                                color: '#ffffff'
+                                            }
                                         }
                                     }
                                 }
-                            }
-                        });
-                    });
+                            });
+                        }
+                        
+                        // Comparison chart
+                        if (data.charts.comparison) {
+                            var compCtx = document.getElementById('comparisonChart').getContext('2d');
+                            new Chart(compCtx, {
+                                type: 'bar',
+                                data: {
+                                    labels: data.charts.comparison.labels,
+                                    datasets: [{
+                                        label: data.charts.comparison.title || 'Comparison',
+                                        data: data.charts.comparison.data,
+                                        backgroundColor: 'rgba(255, 193, 7, 0.5)',
+                                        borderColor: 'rgba(255, 193, 7, 1)',
+                                        borderWidth: 1
+                                    }]
+                                },
+                                options: {
+                                    scales: {
+                                        y: {
+                                            beginAtZero: true,
+                                            grid: {
+                                                color: 'rgba(255, 255, 255, 0.1)'
+                                            },
+                                            ticks: {
+                                                color: '#ffffff'
+                                            }
+                                        },
+                                        x: {
+                                            grid: {
+                                                color: 'rgba(255, 255, 255, 0.1)'
+                                            },
+                                            ticks: {
+                                                color: '#ffffff'
+                                            }
+                                        }
+                                    },
+                                    plugins: {
+                                        legend: {
+                                            labels: {
+                                                color: '#ffffff'
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }, 100);
                 } else {
-                    // If no charts, just update the results container
+                    // No charts, just update the results container
                     resultsContainer.innerHTML = resultsHTML;
                 }
             })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('analysisResults').innerHTML = `
-                    <div class="analysis-error">
-                        <strong>Error:</strong> ${error.message || 'An error occurred while running the analysis.'}
-                    </div>
-                `;
+            .catch(function(error) {
+                // Show error message
+                document.getElementById('analysisResults').innerHTML = 
+                    '<div class="analysis-error">'+
+                        '<strong>Error:</strong> ' + (error.message || 'An unknown error occurred') +
+                    '</div>';
+                console.error('Analysis error:', error);
             });
         });
-                            </tr>
-                            <tr>
-                                <td>Maximum</td>
-                                <td>${data.results.summary.max}</td>
-                            </tr>
-                            <tr>
-                                <td>Q1 (25%)</td>
-                                <td>${data.results.summary.q1}</td>
-                            </tr>
-                            <tr>
-                                <td>Q3 (75%)</td>
-                                <td>${data.results.summary.q3}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                `;
-            } else if (data.analysis_type === 'ttest') {
-                html += `
-                    <div class="alert ${data.results.significant ? 'alert-success' : 'alert-secondary'}">
-                        <h5 class="alert-heading">T-Test Results</h5>
-                        <p>t = ${data.results.t_statistic}, df = ${data.results.df}, p = ${data.results.p_value}</p>
-                        <hr>
-                        <p class="mb-0">Result: ${data.results.significant ? 'Significant difference found' : 'No significant difference'}</p>
-                    </div>
-                `;
-            } else if (data.analysis_type === 'anova') {
-                html += `
-                    <div class="alert ${data.results.significant ? 'alert-success' : 'alert-secondary'}">
-                        <h5 class="alert-heading">ANOVA Results</h5>
-                        <p>F(${data.results.df[0]},${data.results.df[1]}) = ${data.results.f_statistic}, p = ${data.results.p_value}</p>
-                        <hr>
-                        <p class="mb-0">Result: ${data.results.significant ? 'Significant difference found' : 'No significant difference'}</p>
-                    </div>
-                `;
-            } else if (data.analysis_type === 'correlation') {
-                html += `
-                    <div class="alert ${data.results.significant ? 'alert-success' : 'alert-secondary'}">
-                        <h5 class="alert-heading">Correlation Results</h5>
-                        <p>r = ${data.results.correlation}, p = ${data.results.p_value}</p>
-                        <hr>
-                        <p class="mb-0">Result: ${data.results.significant ? 'Significant correlation found' : 'No significant correlation'}</p>
-                    </div>
-                `;
-            }
+        
+        // Function to render descriptive statistics
+        function renderDescriptiveStats(data) {
+            var html = '';
+            
+            html += '<table class="table table-dark table-striped">'+
+                '<thead>'+
+                    '<tr>'+
+                        '<th>Statistic</th>'+
+                        '<th>Value</th>'+
+                    '</tr>'+
+                '</thead>'+
+                '<tbody>'+
+                    '<tr>'+
+                        '<td>Mean</td>'+
+                        '<td>' + data.results.summary.mean + '</td>'+
+                    '</tr>'+
+                    '<tr>'+
+                        '<td>Median</td>'+
+                        '<td>' + data.results.summary.median + '</td>'+
+                    '</tr>'+
+                    '<tr>'+
+                        '<td>Minimum</td>'+
+                        '<td>' + data.results.summary.min + '</td>'+
+                    '</tr>'+
+                    '<tr>'+
+                        '<td>Maximum</td>'+
+                        '<td>' + data.results.summary.max + '</td>'+
+                    '</tr>'+
+                    '<tr>'+
+                        '<td>Q1 (25%)</td>'+
+                        '<td>' + data.results.summary.q1 + '</td>'+
+                    '</tr>'+
+                    '<tr>'+
+                        '<td>Q3 (75%)</td>'+
+                        '<td>' + data.results.summary.q3 + '</td>'+
+                    '</tr>'+
+                '</tbody>'+
+            '</table>';
+            
+            return html;
+        }
+        
+        // Function to render descriptive statistics
+        function renderDescriptiveStats(data) {
+            var html = '';
+            
+            html += '<table class="table table-dark table-striped">'+
+                '<thead>'+
+                    '<tr>'+
+                        '<th>Statistic</th>'+
+                        '<th>Value</th>'+
+                    '</tr>'+
+                '</thead>'+
+                '<tbody>'+
+                    '<tr>'+
+                        '<td>Mean</td>'+
+                        '<td>' + data.results.summary.mean + '</td>'+
+                    '</tr>'+
+                    '<tr>'+
+                        '<td>Median</td>'+
+                        '<td>' + data.results.summary.median + '</td>'+
+                    '</tr>'+
+                    '<tr>'+
+                        '<td>Minimum</td>'+
+                        '<td>' + data.results.summary.min + '</td>'+
+                    '</tr>'+
+                    '<tr>'+
+                        '<td>Maximum</td>'+
+                        '<td>' + data.results.summary.max + '</td>'+
+                    '</tr>'+
+                    '<tr>'+
+                        '<td>Q1 (25%)</td>'+
+                        '<td>' + data.results.summary.q1 + '</td>'+
+                    '</tr>'+
+                    '<tr>'+
+                        '<td>Q3 (75%)</td>'+
+                        '<td>' + data.results.summary.q3 + '</td>'+
+                    '</tr>'+
+                '</tbody>'+
+            '</table>';
+            
+            return html;
+        }
+        
+        // Render T-Test results
+        function renderTTest(data) {
+            var html = '';
+            var alertClass = data.results.significant ? 'alert-success' : 'alert-secondary';
+            
+            html += '<div class="alert ' + alertClass + '">'+
+                '<h5 class="alert-heading">T-Test Results</h5>'+
+                '<p>t = ' + data.results.t_statistic + ', df = ' + data.results.df + ', p = ' + data.results.p_value + '</p>'+
+                '<hr>'+
+                '<p class="mb-0">Result: ' + (data.results.significant ? 'Significant difference found' : 'No significant difference') + '</p>'+
+            '</div>';
+            
+            return html;
+        }
+        
+        // Render ANOVA results
+        function renderAnova(data) {
+            var html = '';
+            var alertClass = data.results.significant ? 'alert-success' : 'alert-secondary';
+            
+            html += '<div class="alert ' + alertClass + '">'+
+                '<h5 class="alert-heading">ANOVA Results</h5>'+
+                '<p>F(' + data.results.df[0] + ',' + data.results.df[1] + ') = ' + data.results.f_statistic + ', p = ' + data.results.p_value + '</p>'+
+                '<hr>'+
+                '<p class="mb-0">Result: ' + (data.results.significant ? 'Significant difference found' : 'No significant difference') + '</p>'+
+            '</div>';
+            
+            return html;
+        }
+        
+        // Render Correlation results
+        function renderCorrelation(data) {
+            var html = '';
+            var alertClass = data.results.significant ? 'alert-success' : 'alert-secondary';
+            
+            html += '<div class="alert ' + alertClass + '">'+
+                '<h5 class="alert-heading">Correlation Results</h5>'+
+                '<p>r = ' + data.results.correlation + ', p = ' + data.results.p_value + '</p>'+
+                '<hr>'+
+                '<p class="mb-0">Result: ' + (data.results.significant ? 'Significant correlation found' : 'No significant correlation') + '</p>'+
+            '</div>';
+            
+            return html;
+        }
             
             container.innerHTML = html;
         }

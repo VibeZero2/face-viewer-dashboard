@@ -5,33 +5,74 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* Card styling for modern dashboard */
 .card {
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     border-radius: 8px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: none;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
 }
 
 .card-header {
     background-color: #f8f9fa;
     border-bottom: 1px solid #eee;
     font-weight: 600;
+    padding: 0.75rem 1rem;
+}
+
+/* Badge styling */
+.badge.rounded-pill {
+    padding: 0.35em 0.65em;
+    font-size: 0.75em;
+}
+
+.bg-pink {
+    background-color: #e83e8c;
+    color: white;
 }
 
 /* Dashboard specific styling */
 .stats-card {
     text-align: center;
-    padding: 15px;
+    padding: 12px;
 }
 
 .stats-card .value {
-    font-size: 2rem;
+    font-size: 1.75rem;
     font-weight: bold;
     color: #0d6efd;
+    margin-bottom: 0;
 }
 
 .stats-card .label {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: #6c757d;
+    margin-bottom: 0;
+}
+
+/* Icon styling */
+.card .fas {
+    opacity: 0.8;
+}
+
+/* Card body padding adjustments */
+.card-body.p-2 {
+    padding: 0.75rem !important;
+}
+
+/* Table styling improvements */
+.table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.05);
+}
+
+.text-end.fw-bold {
+    font-size: 1.1rem;
 }
 
 /* Table styling */

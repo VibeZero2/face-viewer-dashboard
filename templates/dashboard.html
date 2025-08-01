@@ -3,117 +3,164 @@
 <h1 class="mb-4">Face Viewer Dashboard</h1>
 <p class="text-muted">Analysis and visualization of face perception data</p>
 
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card" style="background-color: #fff3cd;">
-            <div class="card-body">
-                <h6 class="card-title text-muted">Total Participants</h6>
-                <h2 class="card-text fw-bold">
-                    {{ total_participants }}
-                </h2>
+<div class="container-fluid mt-4">
+  <!-- Summary Stats Section -->
+  <div class="row g-2 mb-3">
+    <!-- Summary Cards in a single row with smaller, more compact design -->
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-warning">
+        <div class="card-body p-2 text-center">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="text-warning"><i class="fas fa-users fa-2x"></i></div>
+            <div class="text-end">
+              <h6 class="mb-0">Total Participants</h6>
+              <h3 class="mb-0">{{ total_participants }}</h3>
             </div>
+          </div>
         </div>
+      </div>
     </div>
-    <div class="col-md-3">
-        <div class="card" style="background-color: #cfe2ff;">
-            <div class="card-body">
-                <h6 class="card-title text-muted">Total Responses</h6>
-                <h2 class="card-text fw-bold">
-                    {{ total_responses }}
-                </h2>
+    
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-info">
+        <div class="card-body p-2 text-center">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="text-info"><i class="fas fa-clipboard-list fa-2x"></i></div>
+            <div class="text-end">
+              <h6 class="mb-0">Total Responses</h6>
+              <h3 class="mb-0">{{ total_responses }}</h3>
             </div>
+          </div>
         </div>
+      </div>
     </div>
-    <div class="col-md-3">
-        <div class="card" style="background-color: #d1e7dd;">
-            <div class="card-body">
-                <h6 class="card-title text-muted">Average Trust Rating</h6>
-                <h2 class="card-text fw-bold">
-                    {{ avg_trust }}
-                </h2>
+    
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-success">
+        <div class="card-body p-2 text-center">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="text-success"><i class="fas fa-chart-line fa-2x"></i></div>
+            <div class="text-end">
+              <h6 class="mb-0">Avg Trust Rating</h6>
+              <h3 class="mb-0">{{ avg_trust }}</h3>
             </div>
+          </div>
         </div>
+      </div>
     </div>
-    <div class="col-md-3">
-        <div class="card" style="background-color: #f8d7da;">
-            <div class="card-body">
-                <h6 class="card-title text-muted">Trust Rating Std Dev</h6>
-                <h2 class="card-text fw-bold">
-                    {{ std_trust }}
-                </h2>
+    
+    <div class="col-md-3 col-sm-6">
+      <div class="card h-100 border-danger">
+        <div class="card-body p-2 text-center">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="text-danger"><i class="fas fa-chart-bar fa-2x"></i></div>
+            <div class="text-end">
+              <h6 class="mb-0">Trust Rating StdDev</h6>
+              <h3 class="mb-0">{{ std_trust }}</h3>
             </div>
+          </div>
         </div>
+      </div>
     </div>
-</div>
-
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card mb-4">
-            <div class="card-header bg-white">Trust by Face Version</div>
-            <div class="card-body">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Version</th>
-                            <th>Average Trust Rating</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Full Face</td>
-                            <td>{% if stats and stats.trust_by_version and stats.trust_by_version.Full_Face is defined %}{{ stats.trust_by_version.Full_Face }}{% else %}5.64{% endif %}</td>
-                        </tr>
-                        <tr>
-                            <td>Left Half</td>
-                            <td>{% if stats and stats.trust_by_version and stats.trust_by_version.Left_Half is defined %}{{ stats.trust_by_version.Left_Half }}{% else %}3.86{% endif %}</td>
-                        </tr>
-                        <tr>
-                            <td>Right Half</td>
-                            <td>{% if stats and stats.trust_by_version and stats.trust_by_version.Right_Half is defined %}{{ stats.trust_by_version.Right_Half }}{% else %}3.99{% endif %}</td>
-                        </tr>
-                    </tbody>
-                </table>
+  </div>
+  
+  <!-- Trust Analysis Section -->
+  <div class="row g-2 mb-3">
+    <div class="col-md-5">
+      <!-- Trust by Face Version Table -->
+      <div class="card h-100 shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <span class="fw-bold">Trust by Face Version</span>
+          <span class="badge bg-primary rounded-pill">Averages</span>
+        </div>
+        <div class="card-body p-2">
+          <table class="table table-sm table-hover mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Version</th>
+                <th class="text-end">Average Trust Rating</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><i class="fas fa-user me-1"></i> Full Face</td>
+                <td class="text-end fw-bold">{% if stats and stats.trust_by_version and stats.trust_by_version.Full_Face is defined %}{{ stats.trust_by_version.Full_Face }}{% else %}5.64{% endif %}</td>
+              </tr>
+              <tr>
+                <td><i class="fas fa-user-half me-1"></i> Left Half</td>
+                <td class="text-end fw-bold">{% if stats and stats.trust_by_version and stats.trust_by_version.Left_Half is defined %}{{ stats.trust_by_version.Left_Half }}{% else %}3.86{% endif %}</td>
+              </tr>
+              <tr>
+                <td><i class="fas fa-user-half-alt me-1"></i> Right Half</td>
+                <td class="text-end fw-bold">{% if stats and stats.trust_by_version and stats.trust_by_version.Right_Half is defined %}{{ stats.trust_by_version.Right_Half }}{% else %}3.99{% endif %}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-7">
+      <!-- Trust Distribution Chart -->
+      <div class="card h-100 shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <span class="fw-bold">Trust Rating Distribution</span>
+          <span class="badge bg-info rounded-pill">Frequency</span>
+        </div>
+        <div class="card-body">
+          <canvas id="trustDistributionChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Analysis Charts Section -->
+  <div class="row g-2">
+    <!-- 2x2 Grid for Analysis Charts -->
+    <div class="col-lg-6 col-md-12 mb-2">
+      <div class="row g-2">
+        <!-- Face Symmetry Scores Chart -->
+        <div class="col-md-12">
+          <div class="card h-100 shadow-sm">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <span class="fw-bold">Face Symmetry Scores</span>
+              <span class="badge bg-secondary rounded-pill">By Face ID</span>
             </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card mb-4">
-            <div class="card-header bg-white">Trust Rating Distribution</div>
-            <div class="card-body">
-                <canvas id="trustDistributionChart" height="200"></canvas>
+            <div class="card-body p-2">
+              <canvas id="symmetryChart"></canvas>
             </div>
+          </div>
         </div>
+      </div>
     </div>
-</div>
-
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card mb-4">
-            <div class="card-header bg-white">Face Symmetry Scores</div>
-            <div class="card-body">
-                <canvas id="symmetryChart" height="200"></canvas>
+    
+    <div class="col-lg-6 col-md-12 mb-2">
+      <div class="row g-2">
+        <!-- Masculinity & Femininity Charts -->
+        <div class="col-md-6">
+          <div class="card h-100 shadow-sm">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <span class="fw-bold">Masculinity</span>
+              <span class="badge bg-primary rounded-pill">By Version</span>
             </div>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card mb-4">
-            <div class="card-header bg-white">Masculinity Scores by Face Side</div>
-            <div class="card-body">
-                <canvas id="masculinityChart" height="200"></canvas>
+            <div class="card-body p-2">
+              <canvas id="masculinityChart"></canvas>
             </div>
+          </div>
         </div>
-    </div>
-</div>
-
-<div class="row mb-4">
-    <div class="col-md-6">
-        <div class="card mb-4">
-            <div class="card-header bg-white">Femininity Scores by Face Side</div>
-            <div class="card-body">
-                <canvas id="femininityChart" height="200"></canvas>
+        <div class="col-md-6">
+          <div class="card h-100 shadow-sm">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <span class="fw-bold">Femininity</span>
+              <span class="badge bg-pink rounded-pill">By Version</span>
             </div>
+            <div class="card-body p-2">
+              <canvas id="femininityChart"></canvas>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 
 <!-- Admin Tools Section -->
