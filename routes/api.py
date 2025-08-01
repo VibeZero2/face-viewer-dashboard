@@ -301,8 +301,9 @@ def run_analysis():
         # Get request data
         data = request.get_json()
         analysis_type = data.get('analysis_type')
-        variable = data.get('variable')
-        secondary_variable = data.get('secondary_variable')
+        variables = data.get('variables', {})
+        variable = variables.get('variable')
+        secondary_variable = variables.get('secondary_variable')
         
         # Log the request for debugging
         print(f"Running analysis: {analysis_type} on {variable} with secondary variable {secondary_variable}")

@@ -8,24 +8,32 @@
     select.form-select,
     select.form-select option,
     .form-select,
-    .form-select option {
-        color: white !important;
-        background-color: #222 !important;
+    .form-select option,
+    #analysis-secondary-variable,
+    #analysis-secondary-variable option,
+    #analysis-variable,
+    #analysis-variable option,
+    #analysisSecondaryVariable,
+    #analysisSecondaryVariable option,
+    #analysisVariable,
+    #analysisVariable option {
+        color: #222 !important;
+        background-color: #fff !important;
     }
     
     /* Ensure dropdown options are visible and high contrast */
     select.form-select option,
     .form-select option {
-        background-color: #333 !important;
-        color: white !important;
-        text-shadow: 0 0 1px rgba(255,255,255,0.5);
+        background-color: #fff !important;
+        color: #222 !important;
+        text-shadow: none;
     }
     
     /* Fix for secondary variable dropdown text color with increased visibility */
     #analysisVariable,
     #analysisType,
     #analysisSecondaryVariable {
-        color: white !important;
+        color: #222 !important;
         font-weight: 500;
     }
     
@@ -41,8 +49,27 @@
     /* Ensure dropdown text is always visible */
     .form-select:focus,
     .form-select:hover {
-        color: white !important;
-        background-color: #444 !important;
+        color: #222 !important;
+        background-color: #fff !important;
+    }
+    
+    /* Ensure secondary variable container is visible when displayed */
+    #secondaryVariableContainer {
+        display: block;
+    }
+    
+    /* Ensure secondary variable dropdown is always visible when shown */
+    #analysisSecondaryVariable {
+        display: block !important;
+        visibility: visible !important;
+    }
+    
+    /* Disabled form select styling */
+    .form-select:disabled, 
+    .form-select[disabled] {
+        background-color: #e9ecef !important;
+        color: #6c757d !important;
+        opacity: 1 !important;
     }
 </style>
 {% endblock %}
@@ -124,14 +151,25 @@
                                 </div>
                                 
                                 <div class="mb-3">
-                                    <label for="analysisVariable" class="form-label">Variable</label>
-                                    <select class="form-select bg-dark" id="analysisVariable" required>
-                                        <option value="" selected disabled>Select variable...</option>
+                                    <label for="analysisVariable" class="form-label">Primary Variable</label>
+                                    <select class="form-select" id="analysisVariable" name="variable" required>
+                                        <option value="" selected disabled>Select primary variable...</option>
                                         {% for variable in available_variables %}
                                         <option value="{{ variable }}">{{ variable }}</option>
                                         {% endfor %}
                                     </select>
-                                    <div class="form-text text-light" id="variableDescription"></div>
+                                    <div class="form-text" id="variableDescription"></div>
+                                </div>
+                                
+                                <div class="mb-3" id="secondaryVariableContainer" style="display: none;">
+                                    <label for="analysisSecondaryVariable" class="form-label">Secondary Variable</label>
+                                    <select class="form-select" id="analysisSecondaryVariable" name="secondary_variable">
+                                        <option value="" selected disabled>Select secondary variable...</option>
+                                        {% for variable in available_variables %}
+                                        <option value="{{ variable }}">{{ variable }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text" id="secondaryVariableDescription">Required for this analysis type</div>
                                 </div>
                                 
                                 <button type="submit" class="btn btn-warning">Run Analysis</button>
@@ -529,6 +567,7 @@
         document.getElementById('analysisType').addEventListener('change', function() {
             const analysisType = this.value;
             const variableSelect = document.getElementById('analysisVariable');
+            const secondaryVariableContainer = document.getElementById('secondaryVariableContainer');
             
             // Filter variables based on analysis type
             if (analysisType) {
@@ -545,6 +584,18 @@
                         selectedAnalysis = analysesData[i];
                         break;
                     }
+                }
+                
+                // Show/hide secondary variable dropdown based on analysis type
+                if (selectedAnalysis && selectedAnalysis.requires_secondary) {
+                    secondaryVariableContainer.style.display = 'block';
+                    document.getElementById('analysisSecondaryVariable').required = true;
+                    console.log('Secondary variable required for this analysis type');
+                } else {
+                    secondaryVariableContainer.style.display = 'none';
+                    document.getElementById('analysisSecondaryVariable').required = false;
+                    document.getElementById('analysisSecondaryVariable').value = '';
+                    console.log('Secondary variable not required for this analysis type');
                 }
                 
                 if (selectedAnalysis && selectedAnalysis.variables) {
@@ -609,37 +660,61 @@
             }
         });
         
-        // Run analysis when form is submitted
+        // Handle form submission
         document.getElementById('analysisForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
-            var analysisType = document.getElementById('analysisType').value;
-            var variable = document.getElementById('analysisVariable').value;
+            // Get form values
+            const analysisType = document.getElementById('analysisType').value;
+            const variable = document.getElementById('analysisVariable').value;
+            const secondaryVariableElement = document.getElementById('analysisSecondaryVariable');
+            const secondaryVariable = secondaryVariableElement && secondaryVariableElement.style.display !== 'none' ? 
+                                     secondaryVariableElement.value : null;
             
+            // Validate form
             if (!analysisType || !variable) {
-                alert('Please select both an analysis type and a variable');
+                alert('Please select both analysis type and variable');
                 return;
             }
             
-            // Show loading state
-            document.getElementById('analysisResults').innerHTML = 
-                '<div class="text-center">'+
-                    '<div class="spinner-border text-warning" role="status">'+
-                        '<span class="visually-hidden">Loading...</span>'+
-                    '</div>'+
-                    '<p class="mt-2">Running analysis...</p>'+
-                '</div>';
+            // Check if secondary variable is required but not provided
+            const analysesData = JSON.parse('{{ available_analyses|tojson|safe }}');
+            const selectedAnalysis = analysesData.find(a => a.id === analysisType);
             
-            // Make API call to run analysis
+            if (selectedAnalysis && selectedAnalysis.requires_secondary && !secondaryVariable) {
+                alert('This analysis type requires a secondary variable');
+                return;
+            }
+            
+            // Show loading indicator
+            document.getElementById('resultsLoading').classList.remove('d-none');
+            document.getElementById('analysisResults').innerHTML = '';
+            
+            // Prepare request payload with variables object structure
+            const payload = {
+                analysis_type: analysisType,
+                variables: {
+                    variable: variable
+                }
+            };
+            
+            // Add secondary variable if provided
+            if (secondaryVariable) {
+                payload.variables.secondary_variable = secondaryVariable;
+            }
+            
+            // Log the payload for debugging
+            console.log('Analysis request payload:', payload);
+            
+            console.log('Sending analysis request:', payload);
+            
+            // Run analysis via API
             fetch('/api/run_analysis', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    analysis_type: analysisType,
-                    variable: variable
-                })
+                body: JSON.stringify(payload)
             })
             .then(function(response) {
                 if (!response.ok) {
@@ -988,15 +1063,12 @@
             
             html += '<div class="alert ' + alertClass + '">'+
                 '<h5 class="alert-heading">Correlation Results</h5>'+
-                '<p>r = ' + data.results.correlation + ', p = ' + data.results.p_value + '</p>'+
+                '<p>r = ' + data.results.r_value + ', p = ' + data.results.p_value + '</p>'+
                 '<hr>'+
                 '<p class="mb-0">Result: ' + (data.results.significant ? 'Significant correlation found' : 'No significant correlation') + '</p>'+
             '</div>';
             
             return html;
-        }
-            
-            container.innerHTML = html;
         }
         
         // Handle export form submission
@@ -1082,7 +1154,7 @@
                     data_selection: dataSelection,
                     include_labels: includeLabels,
                     include_value_labels: includeValueLabels
-                }),
+                })
             })
             .then(response => response.blob())
             .then(blob => {
@@ -1098,7 +1170,8 @@
                 // Update export history
                 updateExportHistory('SPSS', a.download);
             });
-        });
+        }
+    });
         
         // Function to update export history
         function updateExportHistory(format, filename) {
