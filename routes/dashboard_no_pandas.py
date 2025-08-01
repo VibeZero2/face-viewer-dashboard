@@ -386,13 +386,32 @@ def dashboard():
         
         # Calculate average symmetry scores per face
         avg_symmetry = {}
-        for face_id, scores in symmetry_scores.items():
-            if scores:
-                try:
-                    avg_symmetry[face_id] = round(statistics.mean(scores), 2)
-                except Exception as e:
-                    logger.warning(f"Error calculating mean for face {face_id}: {e}")
-                    avg_symmetry[face_id] = 0.0
+        
+        # Check if symmetry_scores is a dict or list and handle accordingly
+        if isinstance(symmetry_scores, dict):
+            for face_id, scores in symmetry_scores.items():
+                if scores:
+                    try:
+                        avg_symmetry[face_id] = round(statistics.mean(scores), 2)
+                    except Exception as e:
+                        logger.warning(f"Error calculating mean for face {face_id}: {e}")
+                        avg_symmetry[face_id] = 0.0
+        elif isinstance(symmetry_scores, list):
+            # If it's a list, we'll use index as face_id
+            logger.warning("symmetry_scores is a list instead of expected dictionary")
+            for i, score in enumerate(symmetry_scores):
+                if isinstance(score, (int, float)):
+                    avg_symmetry[f'Face {i+1}'] = score
+                elif isinstance(score, list) and score:
+                    try:
+                        avg_symmetry[f'Face {i+1}'] = round(statistics.mean(score), 2)
+                    except Exception as e:
+                        logger.warning(f"Error calculating mean for face index {i}: {e}")
+                        avg_symmetry[f'Face {i+1}'] = 0.0
+        else:
+            logger.error(f"Unexpected type for symmetry_scores: {type(symmetry_scores)}")
+            # Create empty dict as fallback
+            avg_symmetry = {"No Data": 0.0}
         
         symmetry_chart = {
             'labels': list(avg_symmetry.keys()),
@@ -407,15 +426,43 @@ def dashboard():
         
         # Calculate average masculinity scores per face version
         avg_masc = {}
-        for version, scores in masc.items():
-            if scores:
-                try:
-                    avg_masc[version] = round(statistics.mean(scores), 2)
-                except Exception as e:
-                    logger.warning(f"Error calculating masculinity mean for {version}: {e}")
+        
+        # Check if masc is a dict or list and handle accordingly
+        if isinstance(masc, dict):
+            for version, scores in masc.items():
+                if scores:
+                    try:
+                        avg_masc[version] = round(statistics.mean(scores), 2)
+                    except Exception as e:
+                        logger.warning(f"Error calculating masculinity mean for {version}: {e}")
+                        avg_masc[version] = 0.0
+                else:
                     avg_masc[version] = 0.0
-            else:
-                avg_masc[version] = 0.0
+        elif isinstance(masc, list):
+            # If it's a list, we'll use standard face version names
+            logger.warning("masc is a list instead of expected dictionary")
+            versions = ['Full Face', 'Left Half', 'Right Half']
+            for i, score in enumerate(masc[:3]):  # Only use up to 3 elements
+                version = versions[i] if i < len(versions) else f'Version {i+1}'
+                if isinstance(score, (int, float)):
+                    avg_masc[version] = score
+                elif isinstance(score, list) and score:
+                    try:
+                        avg_masc[version] = round(statistics.mean(score), 2)
+                    except Exception as e:
+                        logger.warning(f"Error calculating masculinity mean for index {i}: {e}")
+                        avg_masc[version] = 0.0
+                else:
+                    avg_masc[version] = 0.0
+            
+            # Ensure we have all three standard versions
+            for version in versions:
+                if version not in avg_masc:
+                    avg_masc[version] = 0.0
+        else:
+            logger.error(f"Unexpected type for masc: {type(masc)}")
+            # Create default dict as fallback
+            avg_masc = {'Full Face': 0.0, 'Left Half': 0.0, 'Right Half': 0.0}
         
         masculinity_chart = {
             'labels': list(avg_masc.keys()),
@@ -428,15 +475,43 @@ def dashboard():
         
         # Calculate average femininity scores per face version
         avg_fem = {}
-        for version, scores in fem.items():
-            if scores:
-                try:
-                    avg_fem[version] = round(statistics.mean(scores), 2)
-                except Exception as e:
-                    logger.warning(f"Error calculating femininity mean for {version}: {e}")
+        
+        # Check if fem is a dict or list and handle accordingly
+        if isinstance(fem, dict):
+            for version, scores in fem.items():
+                if scores:
+                    try:
+                        avg_fem[version] = round(statistics.mean(scores), 2)
+                    except Exception as e:
+                        logger.warning(f"Error calculating femininity mean for {version}: {e}")
+                        avg_fem[version] = 0.0
+                else:
                     avg_fem[version] = 0.0
-            else:
-                avg_fem[version] = 0.0
+        elif isinstance(fem, list):
+            # If it's a list, we'll use standard face version names
+            logger.warning("fem is a list instead of expected dictionary")
+            versions = ['Full Face', 'Left Half', 'Right Half']
+            for i, score in enumerate(fem[:3]):  # Only use up to 3 elements
+                version = versions[i] if i < len(versions) else f'Version {i+1}'
+                if isinstance(score, (int, float)):
+                    avg_fem[version] = score
+                elif isinstance(score, list) and score:
+                    try:
+                        avg_fem[version] = round(statistics.mean(score), 2)
+                    except Exception as e:
+                        logger.warning(f"Error calculating femininity mean for index {i}: {e}")
+                        avg_fem[version] = 0.0
+                else:
+                    avg_fem[version] = 0.0
+            
+            # Ensure we have all three standard versions
+            for version in versions:
+                if version not in avg_fem:
+                    avg_fem[version] = 0.0
+        else:
+            logger.error(f"Unexpected type for fem: {type(fem)}")
+            # Create default dict as fallback
+            avg_fem = {'Full Face': 0.0, 'Left Half': 0.0, 'Right Half': 0.0}
         
         femininity_chart = {
             'labels': list(avg_fem.keys()),
