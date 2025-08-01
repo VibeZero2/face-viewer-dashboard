@@ -73,12 +73,31 @@ document.addEventListener('DOMContentLoaded', function() {
             // Get form data
             const formData = new FormData(analysisForm);
             
+            // Convert FormData to JSON for better API handling
+            const formDataObj = {};
+            formData.forEach((value, key) => {
+                formDataObj[key] = value;
+            });
+            
+            // Log form data for debugging
+            console.log('Form data:', formDataObj);
+            
             // Send request to backend
-            fetch('/run_analysis', {
+            console.log('Sending analysis request to /api/run_analysis');
+            fetch('/api/run_analysis', {
                 method: 'POST',
+                headers: {
+                    'Accept': 'application/json'
+                },
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 // Hide loading spinner
                 if (loadingSpinner) loadingSpinner.classList.add('d-none');
@@ -113,9 +132,14 @@ document.addEventListener('DOMContentLoaded', function() {
      * @param {string} message - Error message
      */
     function showError(message) {
+        console.log('Error:', message);
         if (errorAlert) {
             errorAlert.textContent = message;
             errorAlert.classList.remove('d-none');
+            // Scroll to error message
+            errorAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            alert(message);
         }
     }
     
