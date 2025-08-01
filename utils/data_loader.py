@@ -8,6 +8,24 @@ logger = logging.getLogger(__name__)
 # Define a consistent path for responses directory
 RESPONSES_DIR = os.path.join(os.getcwd(), 'data', 'responses')
 
+def safe_float(value, default=0.0):
+    """
+    Safely convert a value to float, returning a default if conversion fails.
+    
+    Args:
+        value: Value to convert to float
+        default: Default value to return if conversion fails
+        
+    Returns:
+        float value or default if conversion fails
+    """
+    try:
+        if value is None or value == '':
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
 def load_all_participant_data(responses_dir=None):
     """
     Loads all participant CSVs from the responses directory.
@@ -64,7 +82,24 @@ def load_all_participant_data(responses_dir=None):
                 file_rows = 0
                 for row in reader:
                     if any(row.values()):  # skip empty rows
+                        # Add defensive defaults for missing columns
                         row["participant_file"] = filename
+                        
+                        # Handle different column naming conventions and missing values
+                        # Participant ID handling
+                        if "Participant ID" not in row and "ParticipantID" in row:
+                            row["Participant ID"] = row["ParticipantID"]
+                        row.setdefault("Participant ID", f"Unknown-{filename}-{file_rows}")
+                        
+                        # Required columns for charts and analysis
+                        row.setdefault("Trust", None)
+                        row.setdefault("Masculinity", None)
+                        row.setdefault("Femininity", None)
+                        row.setdefault("Symmetry", None)
+                        row.setdefault("FaceVersion", "Unknown")
+                        row.setdefault("FaceNumber", "Unknown")
+                        row.setdefault("FaceID", f"Face-{file_rows}")
+                        
                         combined.append(row)
                         file_rows += 1
                 logger.info(f"Loaded {file_rows} rows from {filename}")
