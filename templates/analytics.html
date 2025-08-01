@@ -741,7 +741,7 @@
                 }
                 
                 // Function to display analysis results
-                function displayAnalysisResults(data, container) {
+                function displayAnalysisResults(data) {
                     var html = '';
                     
                     // Add title and summary
@@ -784,33 +784,25 @@
                             for (var k = 0; k < table.rows.length; k++) {
                                 var row = table.rows[k];
                                 html += '<tr>';
-                        
-                        resultsHTML += '</tr>'+
-                                '</thead>'+
-                                '<tbody>';
                                 
-                        // Add rows
-                        for (var k = 0; k < table.rows.length; k++) {
-                            var row = table.rows[k];
-                            resultsHTML += '<tr>';
-                            
-                            // Add cells
-                            for (var l = 0; l < row.length; l++) {
-                                resultsHTML += '<td>' + row[l] + '</td>';
+                                // Add cells
+                                for (var l = 0; l < row.length; l++) {
+                                    html += '<td>' + row[l] + '</td>';
+                                }
+                                
+                                html += '</tr>';
                             }
                             
-                            resultsHTML += '</tr>';
+                            html += '</tbody>'+
+                                '</table>';
                         }
-                        
-                        resultsHTML += '</tbody>'+
-                            '</table>';
                     }
                 }
                 
                 // Add charts if available
                 if (data.charts) {
                     // Add chart containers
-                    resultsHTML += 
+                    html += 
                         '<div class="row mt-4">'+
                             '<div class="col-md-6">'+
                                 '<div class="card bg-dark text-light mb-3">'+
@@ -831,7 +823,7 @@
                         '</div>';
                     
                     // Update results container
-                    resultsContainer.innerHTML = resultsHTML;
+                    resultsContainer.innerHTML = html;
                     
                     // Initialize charts
                     setTimeout(function() {
@@ -929,7 +921,7 @@
                     }, 100);
                 } else {
                     // No charts, just update the results container
-                    resultsContainer.innerHTML = resultsHTML;
+                    resultsContainer.innerHTML = html;
                 }
             })
             .catch(function(error) {
@@ -941,48 +933,6 @@
                 console.error('Analysis error:', error);
             });
         });
-        
-        // Function to render descriptive statistics
-        function renderDescriptiveStats(data) {
-            var html = '';
-            
-            html += '<table class="table table-dark table-striped">'+
-                '<thead>'+
-                    '<tr>'+
-                        '<th>Statistic</th>'+
-                        '<th>Value</th>'+
-                    '</tr>'+
-                '</thead>'+
-                '<tbody>'+
-                    '<tr>'+
-                        '<td>Mean</td>'+
-                        '<td>' + data.results.summary.mean + '</td>'+
-                    '</tr>'+
-                    '<tr>'+
-                        '<td>Median</td>'+
-                        '<td>' + data.results.summary.median + '</td>'+
-                    '</tr>'+
-                    '<tr>'+
-                        '<td>Minimum</td>'+
-                        '<td>' + data.results.summary.min + '</td>'+
-                    '</tr>'+
-                    '<tr>'+
-                        '<td>Maximum</td>'+
-                        '<td>' + data.results.summary.max + '</td>'+
-                    '</tr>'+
-                    '<tr>'+
-                        '<td>Q1 (25%)</td>'+
-                        '<td>' + data.results.summary.q1 + '</td>'+
-                    '</tr>'+
-                    '<tr>'+
-                        '<td>Q3 (75%)</td>'+
-                        '<td>' + data.results.summary.q3 + '</td>'+
-                    '</tr>'+
-                '</tbody>'+
-            '</table>';
-            
-            return html;
-        }
         
         // Function to render descriptive statistics
         function renderDescriptiveStats(data) {
