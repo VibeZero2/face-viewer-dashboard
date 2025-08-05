@@ -114,49 +114,42 @@
   </div>
   
   <!-- Analysis Charts Section -->
-  <div class="row g-2">
-    <!-- 2x2 Grid for Analysis Charts -->
-    <div class="col-lg-6 col-md-12 mb-2">
-      <div class="row g-2">
-        <!-- Face Symmetry Scores Chart -->
-        <div class="col-md-12">
-          <div class="card h-100 shadow-sm">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-              <span class="fw-bold">Face Symmetry Scores</span>
-              <span class="badge bg-secondary rounded-pill">By Face ID</span>
-            </div>
-            <div class="card-body p-2">
-              <canvas id="symmetryChart"></canvas>
-            </div>
-          </div>
+  <!-- Face Symmetry Scores Chart - Full width row -->
+  <div class="row g-2 mb-3">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <span class="fw-bold">Face Symmetry Scores</span>
+          <span class="badge bg-secondary rounded-pill">By Face ID</span>
+        </div>
+        <div class="card-body p-2">
+          <canvas id="symmetryChart"></canvas>
         </div>
       </div>
     </div>
-    
-    <div class="col-lg-6 col-md-12 mb-2">
-      <div class="row g-2">
-        <!-- Masculinity & Femininity Charts -->
-        <div class="col-md-6">
-          <div class="card h-100 shadow-sm">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-              <span class="fw-bold">Masculinity</span>
-              <span class="badge bg-primary rounded-pill">By Version</span>
-            </div>
-            <div class="card-body p-2">
-              <canvas id="masculinityChart"></canvas>
-            </div>
-          </div>
+  </div>
+  
+  <!-- Masculinity & Femininity Charts - Side by Side, Half page each -->
+  <div class="row g-2">
+    <div class="col-md-6">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <span class="fw-bold">Masculinity</span>
+          <span class="badge bg-primary rounded-pill">By Version</span>
         </div>
-        <div class="col-md-6">
-          <div class="card h-100 shadow-sm">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-              <span class="fw-bold">Femininity</span>
-              <span class="badge bg-pink rounded-pill">By Version</span>
-            </div>
-            <div class="card-body p-2">
-              <canvas id="femininityChart"></canvas>
-            </div>
-          </div>
+        <div class="card-body p-3"> <!-- Increased padding for larger appearance -->
+          <canvas id="masculinityChart"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <span class="fw-bold">Femininity</span>
+          <span class="badge bg-pink rounded-pill">By Version</span>
+        </div>
+        <div class="card-body p-3"> <!-- Increased padding for larger appearance -->
+          <canvas id="femininityChart"></canvas>
         </div>
       </div>
     </div>
