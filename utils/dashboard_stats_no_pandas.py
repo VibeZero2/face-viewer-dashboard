@@ -208,8 +208,25 @@ def get_summary_stats():
         symmetry_values = []
         for row in data:
             symmetry = row.get("symmetry_score")
-            if symmetry and symmetry.strip() and symmetry.replace('.', '', 1).isdigit():
-                symmetry_values.append(float(symmetry))
+            if symmetry:
+                # Handle case where symmetry_score is a list
+                if isinstance(symmetry, list):
+                    # Use the first value if it's a list
+                    if symmetry and len(symmetry) > 0:
+                        try:
+                            symmetry_values.append(float(symmetry[0]))
+                        except (ValueError, TypeError):
+                            pass
+                # Handle string case
+                elif isinstance(symmetry, str) and symmetry.strip():
+                    try:
+                        if symmetry.replace('.', '', 1).isdigit():
+                            symmetry_values.append(float(symmetry))
+                    except (ValueError, TypeError):
+                        pass
+                # Handle direct numeric case
+                elif isinstance(symmetry, (int, float)):
+                    symmetry_values.append(float(symmetry))
         
         symmetry_score_mean = round(sum(symmetry_values) / len(symmetry_values), 2) if symmetry_values else 0
         

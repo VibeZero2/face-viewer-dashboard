@@ -5,13 +5,19 @@ This is a simplified version that uses minimal dependencies
 from flask import Flask, render_template_string, render_template
 import os
 import sys
+import logging
+from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+# Direct import of API blueprint to ensure it's registered
+from routes.api import api_bp
 
 # Import blueprints
 from routes.dashboard_no_pandas import dashboard_bp
 from routes.analytics_no_pandas import analytics_bp
 from routes.export_no_pandas import export_bp
 from routes.participants_no_pandas import participants_bp
-from routes.api import api_bp
 from routes.admin_tools import admin_tools
 
 # Initialize Flask app
