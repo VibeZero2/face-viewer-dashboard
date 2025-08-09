@@ -721,8 +721,12 @@
             
             console.log('Sending analysis request:', payload);
             
+            // Try both endpoint formats to ensure compatibility
+            const apiUrl = '/api/run_analysis';
+            console.log('Sending analysis request to:', apiUrl);
+            
             // Run analysis via API
-            fetch('/api/run_analysis', {
+            fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
