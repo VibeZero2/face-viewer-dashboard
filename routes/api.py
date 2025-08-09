@@ -5,9 +5,29 @@ API routes for Face Viewer Dashboard
 from flask import Blueprint, jsonify
 from utils.dashboard_stats_no_pandas import get_summary_stats
 import os
+import logging
+from flask import request
 
 # Create blueprint
 api_bp = Blueprint('api', __name__)
+
+# Logger
+log = logging.getLogger(__name__)
+
+# Lightweight API request logging
+@api_bp.before_app_request
+def _log_api_requests():
+    if request.path.startswith('/api/'):
+        log.info("API %s %s", request.method, request.path)
+
+# Health and ping endpoints
+@api_bp.route('/health', methods=['GET'])
+def health():
+    return jsonify({"ok": True, "service": "dashboard"})
+
+@api_bp.route('/api/ping', methods=['GET'])
+def api_ping():
+    return jsonify({"ok": True, "pong": True})
 
 # Helper functions for R analysis results formatting
 def get_required_columns(analysis_type, variable, secondary_variable=None):
@@ -299,10 +319,12 @@ def run_analysis():
     
     try:
         # Get request data
-        data = request.get_json()
-        analysis_type = data.get('analysis_type')
+        data = request.get_json() or {}
+        # Accept 'test' (preferred) and fall back to 'analysis_type'
+        analysis_type = data.get('test') or data.get('analysis_type')
         variables = data.get('variables', {})
-        variable = variables.get('variable')
+        # Accept 'dv' (preferred) and fall back to nested 'variables.variable'
+        variable = data.get('dv') or variables.get('variable')
         secondary_variable = variables.get('secondary_variable')
         
         # Log the request for debugging
@@ -311,15 +333,15 @@ def run_analysis():
         # Check if we have valid parameters
         if not analysis_type or not variable:
             return jsonify({
-                'success': False,
+                'ok': False,
                 'error': 'Missing parameters',
-                'message': 'Analysis type and variable are required'
+                'message': 'Analysis type (test) and variable (dv) are required'
             }), 400
         
         # Special test case for debugging
         if analysis_type == 'test':
             return jsonify({
-                'success': True,
+                'ok': True,
                 'analysis_type': 'Test Analysis',
                 'variable': variable,
                 'summary': 'This is a test analysis to verify the API is working correctly.',
@@ -340,7 +362,7 @@ def run_analysis():
         # Check if data directory exists
         if not os.path.exists(data_dir):
             return jsonify({
-                'success': False,
+                'ok': False,
                 'error': 'Data directory not found',
                 'message': f'Could not find data directory at {data_dir}'
             }), 500
@@ -349,7 +371,7 @@ def run_analysis():
         csv_files = [f for f in os.listdir(data_dir) if f.endswith('.csv')]
         if not csv_files:
             return jsonify({
-                'success': False,
+                'ok': False,
                 'error': 'No data files',
                 'message': 'No CSV files found in data directory'
             }), 404
@@ -389,7 +411,7 @@ def run_analysis():
         
         if missing_columns:
             return jsonify({
-                'success': False,
+                'ok': False,
                 'error': 'Missing required columns',
                 'message': f"The following required columns are missing from your data: {', '.join(missing_columns)}"
             }), 400
@@ -429,7 +451,7 @@ def run_analysis():
         # Check if we have any data
         if not all_data['rows']:
             return jsonify({
-                'success': False,
+                'ok': False,
                 'error': 'Empty dataset',
                 'message': 'No data rows found in CSV files'
             }), 404
@@ -461,14 +483,14 @@ def run_analysis():
         # Check for errors
         if 'error' in result:
             return jsonify({
-                'success': False,
+                'ok': False,
                 'error': result.get('error', 'Unknown error'),
                 'message': result.get('message', 'An error occurred during analysis')
             }), 400
         
         # Format the result for the frontend
         formatted_result = {
-            'success': True,
+            'ok': True,
             'analysis_type': result.get('test', analysis_type.capitalize()),
             'variable': variable,
             'secondary_variable': secondary_variable,
@@ -483,7 +505,12 @@ def run_analysis():
         print(f"Error in run_analysis: {str(e)}")
         print(traceback.format_exc())
         return jsonify({
-            'success': False,
+            'ok': False,
             'error': 'Server error',
             'message': f'An error occurred while processing the analysis: {str(e)}'
         }), 500
+
+# Alias to support dashed path
+@api_bp.route('/api/run-analysis', methods=['POST'])
+def run_analysis_alias():
+    return run_analysis()
