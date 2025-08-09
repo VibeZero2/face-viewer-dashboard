@@ -228,3 +228,37 @@ def export_to_csv(data: List[Dict[str, Any]], filename: str = None) -> str:
         writer.writerows(data)
         
     return str(export_path)
+
+
+def load_all_data(directory: Union[str, Path] = None) -> tuple:
+    """
+    Load all CSV files and return as a pandas DataFrame with error handling
+    
+    Args:
+        directory: Directory containing CSV files (defaults to RESPONSES_DIR)
+        
+    Returns:
+        Tuple of (DataFrame, error_message)
+        If successful, error_message will be None
+        If failed, DataFrame will be empty and error_message will contain the error
+    """
+    try:
+        # Load data as DataFrame
+        df = load_csv_as_dataframe(directory)
+        
+        if df.empty:
+            return df, "No data found in CSV files"
+            
+        # Convert numeric columns
+        for col in df.columns:
+            # Try to convert to numeric, but don't force it
+            try:
+                df[col] = pd.to_numeric(df[col], errors='ignore')
+            except:
+                pass
+                
+        return df, None
+        
+    except Exception as e:
+        log.error(f"Error loading all data: {str(e)}", exc_info=True)
+        return pd.DataFrame(), str(e)

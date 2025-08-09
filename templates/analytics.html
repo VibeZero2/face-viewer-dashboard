@@ -3,6 +3,7 @@
 {% block title %}{{ title }}{% endblock %}
 
 {% block head %}
+<script src="{{ url_for('static', filename='js/analytics_run.js') }}" defer></script>
 <style>
     /* Fix for variable selector text color - ensure ALL dropdowns are visible */
     select.form-select,
@@ -137,10 +138,10 @@
                             <h5 class="mb-0">Run Statistical Analysis</h5>
                         </div>
                         <div class="card-body">
-                            <form id="analysisForm">
+                            <form id="analytics-form">
                                 <div class="mb-3">
-                                    <label for="analysisType" class="form-label">Analysis Type</label>
-                                    <select id="analysisType" name="analysis_type" class="form-select bg-dark text-light" required>
+                                    <label for="test-select" class="form-label">Analysis Type</label>
+                                    <select id="test-select" name="analysis_type" class="form-select bg-dark text-light" required>
                                         <option value="" selected disabled>Select Analysis Type</option>
                                         {% for analysis in available_analyses %}
                                         <option value="{{ analysis.id }}">{{ analysis.name }}</option>
@@ -151,8 +152,8 @@
                                 </div>
                                 
                                 <div class="mb-3">
-                                    <label for="analysisVariable" class="form-label">Primary Variable</label>
-                                    <select class="form-select" id="analysisVariable" name="variable" required>
+                                    <label for="dv-select" class="form-label">Primary Variable</label>
+                                    <select class="form-select" id="dv-select" name="variable" required>
                                         <option value="" selected disabled>Select primary variable...</option>
                                         {% for variable in available_variables %}
                                         <option value="{{ variable }}">{{ variable }}</option>
@@ -161,9 +162,9 @@
                                     <div class="form-text" id="variableDescription"></div>
                                 </div>
                                 
-                                <div class="mb-3" id="secondaryVariableContainer" style="display: none;">
-                                    <label for="analysisSecondaryVariable" class="form-label">Secondary Variable</label>
-                                    <select class="form-select" id="analysisSecondaryVariable" name="secondary_variable">
+                                <div class="mb-3" id="secondary-variable-container">
+                                    <label for="secondary-variable-select" class="form-label">Secondary Variable</label>
+                                    <select class="form-select" id="secondary-variable-select" name="secondary_variable">
                                         <option value="">Select a variable...</option>
                                         <option value="trust_rating">Trust Rating</option>
                                         <option value="masculinity_rating">Masculinity Rating</option>
@@ -178,8 +179,8 @@
                                         <div class="card-body">
                                             <!-- Gender Filter -->
                                             <div class="mb-3">
-                                                <label for="genderFilter" class="form-label">Gender</label>
-                                                <select class="form-select" id="genderFilter" name="gender">
+                                                <label for="gender-filter" class="form-label">Gender</label>
+                                                <select class="form-select" id="gender-filter" name="gender">
                                                     <option value="all">All</option>
                                                     <option value="male">Male</option>
                                                     <option value="female">Female</option>
@@ -190,31 +191,31 @@
                                             <!-- Age Range Filter -->
                                             <div class="row mb-3">
                                                 <div class="col-6">
-                                                    <label for="ageMinFilter" class="form-label">Age Min</label>
-                                                    <input type="number" class="form-control" id="ageMinFilter" name="age_min" min="0" max="120" placeholder="Min">
+                                                    <label for="age-min" class="form-label">Min Age</label>
+                                                    <input type="number" class="form-control" id="age-min" name="age_min" min="0" max="120" placeholder="Min">
                                                 </div>
                                                 <div class="col-6">
-                                                    <label for="ageMaxFilter" class="form-label">Age Max</label>
-                                                    <input type="number" class="form-control" id="ageMaxFilter" name="age_max" min="0" max="120" placeholder="Max">
+                                                    <label for="age-max" class="form-label">Max Age</label>
+                                                    <input type="number" class="form-control" id="age-max" name="age_max" min="0" max="120" placeholder="Max">
                                                 </div>
                                             </div>
                                             
                                             <!-- Date Range Filter -->
                                             <div class="row">
                                                 <div class="col-6">
-                                                    <label for="dateFromFilter" class="form-label">Date From</label>
-                                                    <input type="date" class="form-control" id="dateFromFilter" name="date_from">
+                                                    <label for="date-from" class="form-label">From Date</label>
+                                                    <input type="date" class="form-control" id="date-from" name="date_from">
                                                 </div>
                                                 <div class="col-6">
-                                                    <label for="dateToFilter" class="form-label">Date To</label>
-                                                    <input type="date" class="form-control" id="dateToFilter" name="date_to">
+                                                    <label for="date-to" class="form-label">To Date</label>
+                                                    <input type="date" class="form-control" id="date-to" name="date_to">
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                                 
-                                <button type="submit" class="btn btn-warning">Run Analysis</button>
+                                <button type="submit" class="btn btn-warning" id="run-analysis-btn">Run Statistical Analysis</button>
                             </form>
                         </div>
                     </div>
@@ -245,10 +246,10 @@
                     </div>
                     <div class="card-footer">
                         <div class="btn-group" role="group">
-                            <button id="downloadResults" class="btn btn-outline-warning" disabled>Download Results</button>
-                            <button id="exportHtmlReport" class="btn btn-outline-warning" disabled>HTML Report</button>
-                            <button id="exportPdfReport" class="btn btn-outline-warning" disabled>PDF Report</button>
-                            <button id="exportCsvData" class="btn btn-outline-warning" disabled>CSV Data</button>
+                            <button id="downloadResults" class="btn btn-secondary" disabled>Download Results</button>
+                            <button id="exportHtmlReport" class="btn btn-secondary" disabled>Export HTML Report</button>
+                            <button id="exportPdfReport" class="btn btn-secondary" disabled>Export PDF Report</button>
+                            <button id="exportCsvReport" class="btn btn-secondary" disabled>Export CSV Data</button>
                         </div>
                     </div>
                 </div>
@@ -447,6 +448,7 @@
 
 {% block scripts %}
 <script>
+    // This script is kept for backward compatibility but most functionality is moved to analytics_run.js
     document.addEventListener('DOMContentLoaded', function() {
         // Run default analysis on page load
         runDefaultAnalysis();
