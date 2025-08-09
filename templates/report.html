@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 20px;
+        }
+        .timestamp {
+            color: #666;
+            font-style: italic;
+            font-size: 0.9em;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section-title {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            color: #444;
+        }
+        .results {
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .apa-text {
+            font-style: italic;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f5f5f5;
+            border-left: 4px solid #28a745;
+        }
+        .plot-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .plot-image {
+            max-width: 100%;
+            height: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .filters-section {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .filter-item {
+            margin-bottom: 5px;
+        }
+        .significant {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .not-significant {
+            color: #dc3545;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ title }}</h1>
+        <p class="timestamp">Generated on {{ timestamp }}</p>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Analysis Information</h2>
+        <p><strong>Analysis Type:</strong> {{ test_type|capitalize }}</p>
+        <p><strong>Primary Variable:</strong> {{ variable }}</p>
+        {% if secondary_variable %}
+        <p><strong>Secondary Variable:</strong> {{ secondary_variable }}</p>
+        {% endif %}
+        <p><strong>Data Points:</strong> {{ data_count }}</p>
+    </div>
+
+    {% if filters %}
+    <div class="section filters-section">
+        <h2 class="section-title">Applied Filters</h2>
+        <ul>
+            {% for key, value in filters.items() %}
+            {% if value %}
+            <li class="filter-item"><strong>{{ key|capitalize }}:</strong> {{ value }}</li>
+            {% endif %}
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="section">
+        <h2 class="section-title">Results</h2>
+        <div class="results">
+            {% if result.ok %}
+            <div class="apa-text">
+                {{ result.apa }}
+            </div>
+
+            {% if test_type == 'descriptives' %}
+            <h3>Descriptive Statistics</h3>
+            <table>
+                <tr>
+                    <th>Statistic</th>
+                    <th>Value</th>
+                </tr>
+                <tr>
+                    <td>N</td>
+                    <td>{{ result.results.n }}</td>
+                </tr>
+                <tr>
+                    <td>Mean</td>
+                    <td>{{ "%.2f"|format(result.results.mean) }}</td>
+                </tr>
+                <tr>
+                    <td>Median</td>
+                    <td>{{ "%.2f"|format(result.results.median) }}</td>
+                </tr>
+                <tr>
+                    <td>Standard Deviation</td>
+                    <td>{{ "%.2f"|format(result.results.std) }}</td>
+                </tr>
+                <tr>
+                    <td>Minimum</td>
+                    <td>{{ "%.2f"|format(result.results.min) }}</td>
+                </tr>
+                <tr>
+                    <td>Maximum</td>
+                    <td>{{ "%.2f"|format(result.results.max) }}</td>
+                </tr>
+                <tr>
+                    <td>1st Quartile</td>
+                    <td>{{ "%.2f"|format(result.results.q1) }}</td>
+                </tr>
+                <tr>
+                    <td>3rd Quartile</td>
+                    <td>{{ "%.2f"|format(result.results.q3) }}</td>
+                </tr>
+            </table>
+            {% endif %}
+
+            {% if test_type == 'ttest' %}
+            <h3>T-Test Results</h3>
+            <table>
+                <tr>
+                    <th>Statistic</th>
+                    <th>Left Face</th>
+                    <th>Right Face</th>
+                </tr>
+                <tr>
+                    <td>Mean</td>
+                    <td>{{ "%.2f"|format(result.results.left_mean) }}</td>
+                    <td>{{ "%.2f"|format(result.results.right_mean) }}</td>
+                </tr>
+                <tr>
+                    <td>Standard Deviation</td>
+                    <td>{{ "%.2f"|format(result.results.left_std) }}</td>
+                    <td>{{ "%.2f"|format(result.results.right_std) }}</td>
+                </tr>
+                <tr>
+                    <td>Mean Difference</td>
+                    <td colspan="2">{{ "%.2f"|format(result.results.mean_diff) }}</td>
+                </tr>
+                <tr>
+                    <td>t-statistic</td>
+                    <td colspan="2">{{ "%.2f"|format(result.results.t_stat) }}</td>
+                </tr>
+                <tr>
+                    <td>p-value</td>
+                    <td colspan="2">{{ "%.3f"|format(result.results.p_value) }}</td>
+                </tr>
+                <tr>
+                    <td>Effect Size (Cohen's d)</td>
+                    <td colspan="2">{{ "%.2f"|format(result.results.effect_size) }}</td>
+                </tr>
+                <tr>
+                    <td>Significance</td>
+                    <td colspan="2" class="{% if result.results.significant %}significant{% else %}not-significant{% endif %}">
+                        {% if result.results.significant %}Significant (p < 0.05){% else %}Not Significant (p ≥ 0.05){% endif %}
+                    </td>
+                </tr>
+            </table>
+            {% endif %}
+
+            {% if test_type == 'wilcoxon' %}
+            <h3>Wilcoxon Signed-Rank Test Results</h3>
+            <table>
+                <tr>
+                    <th>Statistic</th>
+                    <th>Left Face</th>
+                    <th>Right Face</th>
+                </tr>
+                <tr>
+                    <td>Median</td>
+                    <td>{{ "%.2f"|format(result.results.left_median) }}</td>
+                    <td>{{ "%.2f"|format(result.results.right_median) }}</td>
+                </tr>
+                <tr>
+                    <td>Test Statistic</td>
+                    <td colspan="2">{{ "%.2f"|format(result.results.stat) }}</td>
+                </tr>
+                <tr>
+                    <td>Z-Score</td>
+                    <td colspan="2">{{ "%.2f"|format(result.results.z_score) }}</td>
+                </tr>
+                <tr>
+                    <td>p-value</td>
+                    <td colspan="2">{{ "%.3f"|format(result.results.p_value) }}</td>
+                </tr>
+                <tr>
+                    <td>Effect Size (r)</td>
+                    <td colspan="2">{{ "%.2f"|format(result.results.effect_size) }}</td>
+                </tr>
+                <tr>
+                    <td>Significance</td>
+                    <td colspan="2" class="{% if result.results.significant %}significant{% else %}not-significant{% endif %}">
+                        {% if result.results.significant %}Significant (p < 0.05){% else %}Not Significant (p ≥ 0.05){% endif %}
+                    </td>
+                </tr>
+            </table>
+            {% endif %}
+
+            {% if test_type == 'correlation' %}
+            <h3>Correlation Results</h3>
+            <table>
+                <tr>
+                    <th>Correlation Type</th>
+                    <th>Coefficient</th>
+                    <th>p-value</th>
+                    <th>Significance</th>
+                </tr>
+                <tr>
+                    <td>Pearson's r</td>
+                    <td>{{ "%.2f"|format(result.results.pearson_r) }}</td>
+                    <td>{{ "%.3f"|format(result.results.pearson_p) }}</td>
+                    <td class="{% if result.results.significant_pearson %}significant{% else %}not-significant{% endif %}">
+                        {% if result.results.significant_pearson %}Significant (p < 0.05){% else %}Not Significant (p ≥ 0.05){% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Spearman's rho</td>
+                    <td>{{ "%.2f"|format(result.results.spearman_r) }}</td>
+                    <td>{{ "%.3f"|format(result.results.spearman_p) }}</td>
+                    <td class="{% if result.results.significant_spearman %}significant{% else %}not-significant{% endif %}">
+                        {% if result.results.significant_spearman %}Significant (p < 0.05){% else %}Not Significant (p ≥ 0.05){% endif %}
+                    </td>
+                </tr>
+            </table>
+            {% endif %}
+
+            {% else %}
+            <div class="error">
+                <p>Error: {{ result.error }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Visualizations</h2>
+        
+        {% if variable_plot %}
+        <div class="plot-container">
+            <h3>Distribution of {{ variable }}</h3>
+            <img src="{{ variable_plot }}" alt="Distribution of {{ variable }}" class="plot-image">
+        </div>
+        {% endif %}
+        
+        {% if secondary_plot %}
+        <div class="plot-container">
+            <h3>Distribution of {{ secondary_variable }}</h3>
+            <img src="{{ secondary_plot }}" alt="Distribution of {{ secondary_variable }}" class="plot-image">
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="footer">
+        <p>Face Viewer Dashboard - Analysis Report</p>
+        <p>Generated on {{ timestamp }}</p>
+    </div>
+</body>
+</html>

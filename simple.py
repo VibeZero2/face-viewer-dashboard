@@ -24,6 +24,20 @@ from routes.admin_tools import admin_tools
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('DASHBOARD_SECRET_KEY', os.urandom(24).hex())
 
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+# Check and setup environment variables
+from utils.env_checker import setup_environment
+env_status = setup_environment()
+
+# Setup API logging middleware
+from utils.api_logger import setup_api_logging
+app = setup_api_logging(app)
+
 # Register blueprints
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(analytics_bp)
@@ -159,8 +173,8 @@ def direct_run_analysis():
     try:
         from flask import request, jsonify
         import os
-        import csv
         import logging
+        from utils.analysis import run_analysis
         
         log = logging.getLogger(__name__)
         log.info("Direct run_analysis endpoint called")
@@ -170,6 +184,10 @@ def direct_run_analysis():
         analysis_type = data.get('test') or data.get('analysis_type')
         dv = data.get('dv')
         variables = data.get('variables', {})
+        filters = data.get('filters', {})
+        
+        # Log the request details
+        log.info(f"Analysis request: type={analysis_type}, dv={dv}, variables={variables}, filters={filters}")
         
         if not analysis_type:
             return jsonify({
@@ -189,38 +207,19 @@ def direct_run_analysis():
         variable = dv or variables.get('variable')
         secondary_variable = variables.get('secondary_variable')
         
-        # Generate APA-style results based on analysis type
-        result = {}
+        # Run the analysis using our new module
+        result = run_analysis(
+            test_type=analysis_type,
+            variable=variable,
+            filters=filters,
+            secondary_variable=secondary_variable
+        )
         
-        if analysis_type == 'descriptives':
-            result = {
-                'ok': True,
-                'analysis_type': 'Descriptive Statistics',
-                'variable': variable,
-                'apa': f"Descriptive statistics for {variable} (N=3): M = 4.32, SD = 1.45, Range = 1-7"
-            }
-        elif analysis_type == 'ttest':
-            result = {
-                'ok': True,
-                'analysis_type': 'Paired t-test',
-                'variable': variable,
-                'secondary_variable': secondary_variable,
-                'apa': f"A paired-samples t-test revealed a significant difference between {variable} ratings for left face (M = 3.85, SD = 1.23) and right face (M = 4.62, SD = 1.18), t(2) = 3.42, p = .042, d = 0.64."
-            }
-        elif analysis_type == 'wilcoxon':
-            result = {
-                'ok': True,
-                'analysis_type': 'Wilcoxon Signed-Rank Test',
-                'variable': variable,
-                'apa': f"A Wilcoxon signed-rank test indicated that {variable} ratings for right face (Mdn = 4.5) were significantly higher than for left face (Mdn = 3.8), Z = 2.31, p = .021, r = .38."
-            }
-        else:
-            result = {
-                'ok': True,
-                'analysis_type': analysis_type.capitalize(),
-                'variable': variable,
-                'apa': f"Analysis of {variable} using {analysis_type} was completed successfully."
-            }
+        # Add analysis metadata
+        result['analysis_type'] = analysis_type.capitalize()
+        result['variable'] = variable
+        if secondary_variable:
+            result['secondary_variable'] = secondary_variable
         
         return jsonify(result)
             
@@ -233,6 +232,225 @@ def direct_run_analysis():
             'error': 'Server error',
             'message': f'An error occurred while processing the analysis: {str(e)}'
         }), 500
+
+@app.route('/analytics/data.csv')
+def analytics_csv_export():
+    """Export analytics data as CSV"""
+    try:
+        from flask import request, Response
+        import csv
+        import io
+        import logging
+        from datetime import datetime
+        from utils.csv_loader import load_csv_files, filter_data
+        
+        log = logging.getLogger(__name__)
+        log.info("Analytics CSV export endpoint called")
+        
+        # Get query parameters
+        test = request.args.get('test', '')
+        dv = request.args.get('dv', '')
+        
+        # Build filters from query parameters
+        filters = {}
+        
+        # Gender filter
+        gender = request.args.get('gender', '')
+        if gender and gender.lower() != 'all':
+            filters['gender'] = gender
+        
+        # Age range filters
+        age_min = request.args.get('age_min', '')
+        if age_min:
+            filters['age_min'] = age_min
+            
+        age_max = request.args.get('age_max', '')
+        if age_max:
+            filters['age_max'] = age_max
+        
+        # Date range filters
+        date_from = request.args.get('date_from', '')
+        if date_from:
+            filters['date_from'] = date_from
+            
+        date_to = request.args.get('date_to', '')
+        if date_to:
+            filters['date_to'] = date_to
+        
+        # Log the request
+        log.info(f"CSV export request: test={test}, dv={dv}, filters={filters}")
+        
+        # Load and filter data
+        data = load_csv_files()
+        if filters:
+            data = filter_data(data, filters)
+        
+        if not data:
+            log.warning("No data found matching the specified filters")
+            return "No data found matching the specified filters", 404
+        
+        # Create a string buffer for the CSV data
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Get all unique keys across all dictionaries
+        all_keys = set()
+        for row in data:
+            all_keys.update(row.keys())
+        
+        # Write headers - sort them for consistency
+        writer.writerow(sorted(all_keys))
+        
+        # Write data rows
+        for row in data:
+            # Create a row with all columns, using empty string for missing values
+            csv_row = [row.get(key, '') for key in sorted(all_keys)]
+            writer.writerow(csv_row)
+        
+        # Prepare the response
+        output.seek(0)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"face_analysis_{timestamp}.csv"
+        
+        return Response(
+            output.getvalue(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": f"attachment;filename={filename}"}
+        )
+        
+    except Exception as e:
+        log.error(f"Error in analytics_csv_export: {str(e)}", exc_info=True)
+        return f"Error generating CSV: {str(e)}", 500
+
+@app.route('/analytics/report.html')
+def analytics_html_report():
+    """Generate HTML report for analytics"""
+    try:
+        from flask import request, Response
+        import logging
+        from utils.report_generator import generate_html_report
+        
+        log = logging.getLogger(__name__)
+        log.info("Analytics HTML report endpoint called")
+        
+        # Get query parameters
+        test = request.args.get('test', '')
+        dv = request.args.get('dv', '')
+        
+        # Build filters from query parameters
+        filters = {}
+        
+        # Gender filter
+        gender = request.args.get('gender', '')
+        if gender and gender.lower() != 'all':
+            filters['gender'] = gender
+        
+        # Age range filters
+        age_min = request.args.get('age_min', '')
+        if age_min:
+            filters['age_min'] = age_min
+            
+        age_max = request.args.get('age_max', '')
+        if age_max:
+            filters['age_max'] = age_max
+        
+        # Date range filters
+        date_from = request.args.get('date_from', '')
+        if date_from:
+            filters['date_from'] = date_from
+            
+        date_to = request.args.get('date_to', '')
+        if date_to:
+            filters['date_to'] = date_to
+            
+        # Secondary variable (for correlation)
+        secondary_variable = request.args.get('secondary_variable', None)
+        
+        # Log the request
+        log.info(f"HTML report request: test={test}, dv={dv}, filters={filters}, secondary_variable={secondary_variable}")
+        
+        if not test or not dv:
+            return "Missing required parameters: test and dv", 400
+        
+        # Generate HTML report
+        html_content = generate_html_report(test, dv, filters, secondary_variable)
+        
+        return html_content
+        
+    except Exception as e:
+        log.error(f"Error in analytics_html_report: {str(e)}", exc_info=True)
+        return f"Error generating HTML report: {str(e)}", 500
+
+@app.route('/analytics/report.pdf')
+def analytics_pdf_report():
+    """Generate PDF report for analytics"""
+    try:
+        from flask import request, Response
+        import logging
+        from utils.report_generator import generate_pdf_report
+        
+        log = logging.getLogger(__name__)
+        log.info("Analytics PDF report endpoint called")
+        
+        # Get query parameters
+        test = request.args.get('test', '')
+        dv = request.args.get('dv', '')
+        
+        # Build filters from query parameters
+        filters = {}
+        
+        # Gender filter
+        gender = request.args.get('gender', '')
+        if gender and gender.lower() != 'all':
+            filters['gender'] = gender
+        
+        # Age range filters
+        age_min = request.args.get('age_min', '')
+        if age_min:
+            filters['age_min'] = age_min
+            
+        age_max = request.args.get('age_max', '')
+        if age_max:
+            filters['age_max'] = age_max
+        
+        # Date range filters
+        date_from = request.args.get('date_from', '')
+        if date_from:
+            filters['date_from'] = date_from
+            
+        date_to = request.args.get('date_to', '')
+        if date_to:
+            filters['date_to'] = date_to
+            
+        # Secondary variable (for correlation)
+        secondary_variable = request.args.get('secondary_variable', None)
+        
+        # Log the request
+        log.info(f"PDF report request: test={test}, dv={dv}, filters={filters}, secondary_variable={secondary_variable}")
+        
+        if not test or not dv:
+            return "Missing required parameters: test and dv", 400
+        
+        # Generate PDF report
+        pdf_content = generate_pdf_report(test, dv, filters, secondary_variable)
+        
+        if not pdf_content:
+            return "Error generating PDF report", 500
+        
+        # Prepare the response
+        from datetime import datetime
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"face_analysis_report_{timestamp}.pdf"
+        
+        return Response(
+            pdf_content,
+            mimetype="application/pdf",
+            headers={"Content-Disposition": f"attachment;filename={filename}"}
+        )
+        
+    except Exception as e:
+        log.error(f"Error in analytics_pdf_report: {str(e)}", exc_info=True)
+        return f"Error generating PDF report: {str(e)}", 500
 
 # This is the standard WSGI application variable that Gunicorn looks for
 application = app

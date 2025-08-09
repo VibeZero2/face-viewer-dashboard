@@ -164,12 +164,54 @@
                                 <div class="mb-3" id="secondaryVariableContainer" style="display: none;">
                                     <label for="analysisSecondaryVariable" class="form-label">Secondary Variable</label>
                                     <select class="form-select" id="analysisSecondaryVariable" name="secondary_variable">
-                                        <option value="" selected disabled>Select secondary variable...</option>
-                                        {% for variable in available_variables %}
-                                        <option value="{{ variable }}">{{ variable }}</option>
-                                        {% endfor %}
+                                        <option value="">Select a variable...</option>
+                                        <option value="trust_rating">Trust Rating</option>
+                                        <option value="masculinity_rating">Masculinity Rating</option>
+                                        <option value="femininity_rating">Femininity Rating</option>
                                     </select>
-                                    <div class="form-text" id="secondaryVariableDescription">Required for this analysis type</div>
+                                    <div class="form-text" id="secondaryVariableDescription"></div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Filters</label>
+                                    <div class="card bg-dark border-secondary mb-3">
+                                        <div class="card-body">
+                                            <!-- Gender Filter -->
+                                            <div class="mb-3">
+                                                <label for="genderFilter" class="form-label">Gender</label>
+                                                <select class="form-select" id="genderFilter" name="gender">
+                                                    <option value="all">All</option>
+                                                    <option value="male">Male</option>
+                                                    <option value="female">Female</option>
+                                                    <option value="other">Other</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <!-- Age Range Filter -->
+                                            <div class="row mb-3">
+                                                <div class="col-6">
+                                                    <label for="ageMinFilter" class="form-label">Age Min</label>
+                                                    <input type="number" class="form-control" id="ageMinFilter" name="age_min" min="0" max="120" placeholder="Min">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label for="ageMaxFilter" class="form-label">Age Max</label>
+                                                    <input type="number" class="form-control" id="ageMaxFilter" name="age_max" min="0" max="120" placeholder="Max">
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Date Range Filter -->
+                                            <div class="row">
+                                                <div class="col-6">
+                                                    <label for="dateFromFilter" class="form-label">Date From</label>
+                                                    <input type="date" class="form-control" id="dateFromFilter" name="date_from">
+                                                </div>
+                                                <div class="col-6">
+                                                    <label for="dateToFilter" class="form-label">Date To</label>
+                                                    <input type="date" class="form-control" id="dateToFilter" name="date_to">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 
                                 <button type="submit" class="btn btn-warning">Run Analysis</button>
@@ -202,7 +244,12 @@
                         </div>
                     </div>
                     <div class="card-footer">
-                        <button id="downloadResults" class="btn btn-outline-warning" disabled>Download Results</button>
+                        <div class="btn-group" role="group">
+                            <button id="downloadResults" class="btn btn-outline-warning" disabled>Download Results</button>
+                            <button id="exportHtmlReport" class="btn btn-outline-warning" disabled>HTML Report</button>
+                            <button id="exportPdfReport" class="btn btn-outline-warning" disabled>PDF Report</button>
+                            <button id="exportCsvData" class="btn btn-outline-warning" disabled>CSV Data</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -664,6 +711,64 @@
             }
         });
         
+        // Save selections to localStorage when dropdowns change
+        document.getElementById('analysisType').addEventListener('change', function() {
+            localStorage.setItem('analytics_test_selected', this.value);
+        });
+        
+        document.getElementById('analysisVariable').addEventListener('change', function() {
+            localStorage.setItem('analytics_dv_selected', this.value);
+        });
+        
+        // Restore saved values from localStorage on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTest = localStorage.getItem('analytics_test_selected');
+            const savedDv = localStorage.getItem('analytics_dv_selected');
+            
+            if (savedTest) {
+                const testSelect = document.getElementById('analysisType');
+                if (testSelect) testSelect.value = savedTest;
+                // Trigger change event to update dependent dropdowns
+                testSelect.dispatchEvent(new Event('change'));
+            }
+            
+            if (savedDv) {
+                const dvSelect = document.getElementById('analysisVariable');
+                if (dvSelect && !dvSelect.disabled) dvSelect.value = savedDv;
+            }
+            
+            // Restore filter values
+            const savedGender = localStorage.getItem('analytics_gender_filter');
+            if (savedGender) {
+                const genderFilter = document.getElementById('genderFilter');
+                if (genderFilter) genderFilter.value = savedGender;
+            }
+            
+            const savedAgeMin = localStorage.getItem('analytics_age_min');
+            if (savedAgeMin) {
+                const ageMinFilter = document.getElementById('ageMinFilter');
+                if (ageMinFilter) ageMinFilter.value = savedAgeMin;
+            }
+            
+            const savedAgeMax = localStorage.getItem('analytics_age_max');
+            if (savedAgeMax) {
+                const ageMaxFilter = document.getElementById('ageMaxFilter');
+                if (ageMaxFilter) ageMaxFilter.value = savedAgeMax;
+            }
+            
+            const savedDateFrom = localStorage.getItem('analytics_date_from');
+            if (savedDateFrom) {
+                const dateFromFilter = document.getElementById('dateFromFilter');
+                if (dateFromFilter) dateFromFilter.value = savedDateFrom;
+            }
+            
+            const savedDateTo = localStorage.getItem('analytics_date_to');
+            if (savedDateTo) {
+                const dateToFilter = document.getElementById('dateToFilter');
+                if (dateToFilter) dateToFilter.value = savedDateTo;
+            }
+        });
+        
         // Handle form submission
         document.getElementById('analysisForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -675,9 +780,20 @@
             const secondaryVariable = secondaryVariableElement && secondaryVariableElement.style.display !== 'none' ? 
                                      secondaryVariableElement.value : null;
             
+            // Save selections to localStorage
+            localStorage.setItem('analytics_test_selected', analysisType);
+            localStorage.setItem('analytics_dv_selected', variable);
+            if (secondaryVariable) {
+                localStorage.setItem('analytics_secondary_var_selected', secondaryVariable);
+            }
+            
             // Validate form
             if (!analysisType || !variable) {
-                alert('Please select both analysis type and variable');
+                const errorBox = document.createElement('div');
+                errorBox.className = 'alert alert-danger';
+                errorBox.innerHTML = '<strong>Error:</strong> Please select both analysis type and variable';
+                document.getElementById('analysisResults').innerHTML = '';
+                document.getElementById('analysisResults').appendChild(errorBox);
                 return;
             }
             
@@ -686,7 +802,11 @@
             const selectedAnalysis = analysesData.find(a => a.id === analysisType);
             
             if (selectedAnalysis && selectedAnalysis.requires_secondary && !secondaryVariable) {
-                alert('This analysis type requires a secondary variable');
+                const errorBox = document.createElement('div');
+                errorBox.className = 'alert alert-danger';
+                errorBox.innerHTML = '<strong>Error:</strong> This analysis type requires a secondary variable';
+                document.getElementById('analysisResults').innerHTML = '';
+                document.getElementById('analysisResults').appendChild(errorBox);
                 return;
             }
             
@@ -708,6 +828,7 @@
             const payload = {
                 test: test,
                 dv: variable,
+                filters: {},
                 variables: {}
             };
             
@@ -716,17 +837,46 @@
                 payload.variables.secondary_variable = secondaryVariable;
             }
             
+            // Add all filters that might be present
+            const genderFilter = document.getElementById('genderFilter');
+            if (genderFilter && genderFilter.value !== 'all') {
+                payload.filters.gender = genderFilter.value;
+            }
+            
+            // Age range filters
+            const ageMinFilter = document.getElementById('ageMinFilter');
+            if (ageMinFilter && ageMinFilter.value) {
+                payload.filters.age_min = ageMinFilter.value;
+            }
+            
+            const ageMaxFilter = document.getElementById('ageMaxFilter');
+            if (ageMaxFilter && ageMaxFilter.value) {
+                payload.filters.age_max = ageMaxFilter.value;
+            }
+            
+            // Date range filters
+            const dateFromFilter = document.getElementById('dateFromFilter');
+            if (dateFromFilter && dateFromFilter.value) {
+                payload.filters.date_from = dateFromFilter.value;
+            }
+            
+            const dateToFilter = document.getElementById('dateToFilter');
+            if (dateToFilter && dateToFilter.value) {
+                payload.filters.date_to = dateToFilter.value;
+            }
+            
+            // Save filter values to localStorage
+            if (genderFilter) localStorage.setItem('analytics_gender_filter', genderFilter.value);
+            if (ageMinFilter) localStorage.setItem('analytics_age_min', ageMinFilter.value);
+            if (ageMaxFilter) localStorage.setItem('analytics_age_max', ageMaxFilter.value);
+            if (dateFromFilter) localStorage.setItem('analytics_date_from', dateFromFilter.value);
+            if (dateToFilter) localStorage.setItem('analytics_date_to', dateToFilter.value);
+            
             // Log the payload for debugging
             console.log('Analysis request payload:', payload);
             
-            console.log('Sending analysis request:', payload);
-            
-            // Try both endpoint formats to ensure compatibility
-            const apiUrl = '/api/run_analysis';
-            console.log('Sending analysis request to:', apiUrl);
-            
             // Run analysis via API
-            fetch(apiUrl, {
+            fetch('/api/run_analysis', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -754,8 +904,13 @@
                 console.error('Analysis request error:', err);
             })
             .then(function(data) {
-                // Enable download button
+                if (!data) return; // Handle case where data is undefined (caught by catch block)
+                
+                // Enable all export buttons
                 document.getElementById('downloadResults').removeAttribute('disabled');
+                document.getElementById('exportHtmlReport').removeAttribute('disabled');
+                document.getElementById('exportPdfReport').removeAttribute('disabled');
+                document.getElementById('exportCsvData').removeAttribute('disabled');
                 
                 // Display results
                 var resultsContainer = document.getElementById('analysisResults');
@@ -774,7 +929,32 @@
 
                 // If APA text is provided from backend, prefer showing that immediately
                 if (data && (data.ok || data.success) && data.apa) {
-                    resultsContainer.innerHTML = '<div class="alert alert-success"><strong>Results:</strong></div><div class="p-3 border border-warning rounded">' + data.apa + '</div>';
+                    resultsContainer.innerHTML = 
+                        '<div class="alert alert-success"><strong>Analysis Complete</strong></div>' +
+                        '<div class="p-3 border border-warning rounded mb-3">' + data.apa + '</div>';
+                    
+                    // Add export CSV button if not already present
+                    if (!document.getElementById('exportCsvBtn')) {
+                        const exportBtn = document.createElement('button');
+                        exportBtn.id = 'exportCsvBtn';
+                        exportBtn.className = 'btn btn-outline-warning mt-2';
+                        exportBtn.innerHTML = '<i class="fas fa-file-csv"></i> Export CSV';
+                        exportBtn.onclick = function() {
+                            // Build export URL with current filters
+                            let url = '/analytics/data.csv?test=' + encodeURIComponent(test) + 
+                                      '&dv=' + encodeURIComponent(variable);
+                            
+                            // Add any filters
+                            if (genderFilter && genderFilter.value !== 'all') {
+                                url += '&gender=' + encodeURIComponent(genderFilter.value);
+                            }
+                            
+                            // Trigger download
+                            window.location.href = url;
+                        };
+                        resultsContainer.appendChild(exportBtn);
+                    }
+                    
                     return;
                 }
                 
@@ -1202,6 +1382,168 @@
         // Handle download results button
         document.getElementById('downloadResults').addEventListener('click', function() {
             alert('This is a mock download. In a production environment, this would download the analysis results in various formats.');
+        });
+        
+        // Handle HTML report export button
+        document.getElementById('exportHtmlReport').addEventListener('click', function() {
+            // Get current analysis parameters
+            const analysisType = document.getElementById('analysisType').value;
+            const variable = document.getElementById('analysisVariable').value;
+            const secondaryVariable = document.getElementById('analysisSecondaryVariable')?.value;
+            
+            // Map common analysis ids to backend 'test' values
+            let test = analysisType;
+            if (analysisType === 'descriptive' || analysisType === 'descriptives') {
+                test = 'descriptives';
+            } else if (analysisType === 'ttest' || analysisType === 'paired_t' || analysisType === 'paired_ttest') {
+                test = 'ttest';
+            } else if (analysisType === 'wilcoxon') {
+                test = 'wilcoxon';
+            }
+            
+            // Build URL with parameters
+            let url = '/analytics/report.html?test=' + encodeURIComponent(test) + 
+                      '&dv=' + encodeURIComponent(variable);
+            
+            // Add secondary variable if present
+            if (secondaryVariable) {
+                url += '&secondary_variable=' + encodeURIComponent(secondaryVariable);
+            }
+            
+            // Add filters
+            const genderFilter = document.getElementById('genderFilter');
+            if (genderFilter && genderFilter.value !== 'all') {
+                url += '&gender=' + encodeURIComponent(genderFilter.value);
+            }
+            
+            const ageMinFilter = document.getElementById('ageMinFilter');
+            if (ageMinFilter && ageMinFilter.value) {
+                url += '&age_min=' + encodeURIComponent(ageMinFilter.value);
+            }
+            
+            const ageMaxFilter = document.getElementById('ageMaxFilter');
+            if (ageMaxFilter && ageMaxFilter.value) {
+                url += '&age_max=' + encodeURIComponent(ageMaxFilter.value);
+            }
+            
+            const dateFromFilter = document.getElementById('dateFromFilter');
+            if (dateFromFilter && dateFromFilter.value) {
+                url += '&date_from=' + encodeURIComponent(dateFromFilter.value);
+            }
+            
+            const dateToFilter = document.getElementById('dateToFilter');
+            if (dateToFilter && dateToFilter.value) {
+                url += '&date_to=' + encodeURIComponent(dateToFilter.value);
+            }
+            
+            // Open in new tab
+            window.open(url, '_blank');
+        });
+        
+        // Handle PDF report export button
+        document.getElementById('exportPdfReport').addEventListener('click', function() {
+            // Get current analysis parameters
+            const analysisType = document.getElementById('analysisType').value;
+            const variable = document.getElementById('analysisVariable').value;
+            const secondaryVariable = document.getElementById('analysisSecondaryVariable')?.value;
+            
+            // Map common analysis ids to backend 'test' values
+            let test = analysisType;
+            if (analysisType === 'descriptive' || analysisType === 'descriptives') {
+                test = 'descriptives';
+            } else if (analysisType === 'ttest' || analysisType === 'paired_t' || analysisType === 'paired_ttest') {
+                test = 'ttest';
+            } else if (analysisType === 'wilcoxon') {
+                test = 'wilcoxon';
+            }
+            
+            // Build URL with parameters
+            let url = '/analytics/report.pdf?test=' + encodeURIComponent(test) + 
+                      '&dv=' + encodeURIComponent(variable);
+            
+            // Add secondary variable if present
+            if (secondaryVariable) {
+                url += '&secondary_variable=' + encodeURIComponent(secondaryVariable);
+            }
+            
+            // Add filters
+            const genderFilter = document.getElementById('genderFilter');
+            if (genderFilter && genderFilter.value !== 'all') {
+                url += '&gender=' + encodeURIComponent(genderFilter.value);
+            }
+            
+            const ageMinFilter = document.getElementById('ageMinFilter');
+            if (ageMinFilter && ageMinFilter.value) {
+                url += '&age_min=' + encodeURIComponent(ageMinFilter.value);
+            }
+            
+            const ageMaxFilter = document.getElementById('ageMaxFilter');
+            if (ageMaxFilter && ageMaxFilter.value) {
+                url += '&age_max=' + encodeURIComponent(ageMaxFilter.value);
+            }
+            
+            const dateFromFilter = document.getElementById('dateFromFilter');
+            if (dateFromFilter && dateFromFilter.value) {
+                url += '&date_from=' + encodeURIComponent(dateFromFilter.value);
+            }
+            
+            const dateToFilter = document.getElementById('dateToFilter');
+            if (dateToFilter && dateToFilter.value) {
+                url += '&date_to=' + encodeURIComponent(dateToFilter.value);
+            }
+            
+            // Trigger download
+            window.location.href = url;
+        });
+        
+        // Handle CSV data export button
+        document.getElementById('exportCsvData').addEventListener('click', function() {
+            // Get current analysis parameters
+            const analysisType = document.getElementById('analysisType').value;
+            const variable = document.getElementById('analysisVariable').value;
+            
+            // Map common analysis ids to backend 'test' values
+            let test = analysisType;
+            if (analysisType === 'descriptive' || analysisType === 'descriptives') {
+                test = 'descriptives';
+            } else if (analysisType === 'ttest' || analysisType === 'paired_t' || analysisType === 'paired_ttest') {
+                test = 'ttest';
+            } else if (analysisType === 'wilcoxon') {
+                test = 'wilcoxon';
+            }
+            
+            // Build URL with parameters
+            let url = '/analytics/data.csv?test=' + encodeURIComponent(test) + 
+                      '&dv=' + encodeURIComponent(variable);
+            
+            // Add filters
+            const genderFilter = document.getElementById('genderFilter');
+            if (genderFilter && genderFilter.value !== 'all') {
+                url += '&gender=' + encodeURIComponent(genderFilter.value);
+            }
+            
+            const ageMinFilter = document.getElementById('ageMinFilter');
+            if (ageMinFilter && ageMinFilter.value) {
+                url += '&age_min=' + encodeURIComponent(ageMinFilter.value);
+            }
+            
+            const ageMaxFilter = document.getElementById('ageMaxFilter');
+            if (ageMaxFilter && ageMaxFilter.value) {
+                url += '&age_max=' + encodeURIComponent(ageMaxFilter.value);
+            }
+            
+            const dateFromFilter = document.getElementById('dateFromFilter');
+            if (dateFromFilter && dateFromFilter.value) {
+                url += '&date_from=' + encodeURIComponent(dateFromFilter.value);
+            }
+            
+            const dateToFilter = document.getElementById('dateToFilter');
+            if (dateToFilter && dateToFilter.value) {
+                url += '&date_to=' + encodeURIComponent(dateToFilter.value);
+            }
+            
+            // Trigger download
+            window.location.href = url;
         });
     });
 </script>
