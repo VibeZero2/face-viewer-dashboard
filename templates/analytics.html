@@ -741,6 +741,18 @@
                 }
                 return response.json();
             })
+            .catch(function(err) {
+                // Hide loading indicator
+                document.getElementById('resultsLoading').classList.add('d-none');
+                
+                // Display error message
+                document.getElementById('analysisResults').innerHTML = 
+                    '<div class="alert alert-danger">'+
+                        '<strong>Error:</strong> ' + (err.message || 'An unknown error occurred during the request') +
+                    '</div>';
+                
+                console.error('Analysis request error:', err);
+            })
             .then(function(data) {
                 // Enable download button
                 document.getElementById('downloadResults').removeAttribute('disabled');
@@ -748,10 +760,13 @@
                 // Display results
                 var resultsContainer = document.getElementById('analysisResults');
                 
+                // Hide loading indicator
+                document.getElementById('resultsLoading').classList.add('d-none');
+                
                 // Check if there's an error in the response
                 if (data && (data.ok === false || data.error) ) {
                     resultsContainer.innerHTML = 
-                        '<div class="analysis-error">'+
+                        '<div class="alert alert-danger">'+
                             '<strong>Error:</strong> ' + (data.message || data.error || 'An unknown error occurred') +
                         '</div>';
                     return;
@@ -759,7 +774,7 @@
 
                 // If APA text is provided from backend, prefer showing that immediately
                 if (data && (data.ok || data.success) && data.apa) {
-                    resultsContainer.textContent = data.apa;
+                    resultsContainer.innerHTML = '<div class="alert alert-success"><strong>Results:</strong></div><div class="p-3 border border-warning rounded">' + data.apa + '</div>';
                     return;
                 }
                 
