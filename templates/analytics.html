@@ -406,19 +406,23 @@
         
         // Function to run default analysis
         function runDefaultAnalysis() {
-            fetch('/api/run_analysis?analysis_type=trust_by_face')
-                .then(response => response.json())
-                .then(data => {
-                    renderAnalysisResults(data);
-                })
-                .catch(error => {
-                    console.error('Error running default analysis:', error);
-                });
+            fetch('/api/run_analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ test: 'descriptives', dv: 'trust' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                renderAnalysisResults(data);
+            })
+            .catch(error => {
+                console.error('Error running default analysis:', error);
+            });
         }
         
         // Function to render analysis results
         function renderAnalysisResults(data) {
-            if (!data || !data.success) {
+            if (!data || !(data.ok || data.success)) {
                 console.error('Invalid analysis data:', data);
                 return;
             }
@@ -690,12 +694,21 @@
             document.getElementById('resultsLoading').classList.remove('d-none');
             document.getElementById('analysisResults').innerHTML = '';
             
-            // Prepare request payload with variables object structure
+            // Prepare request payload aligned with backend contract { test, dv }
+            // Map common analysis ids to backend 'test' values
+            let test = analysisType;
+            if (analysisType === 'descriptive' || analysisType === 'descriptives') {
+                test = 'descriptives';
+            } else if (analysisType === 'ttest' || analysisType === 'paired_t' || analysisType === 'paired_ttest') {
+                test = 'ttest';
+            } else if (analysisType === 'wilcoxon') {
+                test = 'wilcoxon';
+            }
+
             const payload = {
-                analysis_type: analysisType,
-                variables: {
-                    variable: variable
-                }
+                test: test,
+                dv: variable,
+                variables: {}
             };
             
             // Add secondary variable if provided
@@ -732,11 +745,17 @@
                 var resultsContainer = document.getElementById('analysisResults');
                 
                 // Check if there's an error in the response
-                if (data.error || !data.success) {
+                if (data && (data.ok === false || data.error) ) {
                     resultsContainer.innerHTML = 
                         '<div class="analysis-error">'+
                             '<strong>Error:</strong> ' + (data.message || data.error || 'An unknown error occurred') +
                         '</div>';
+                    return;
+                }
+
+                // If APA text is provided from backend, prefer showing that immediately
+                if (data && (data.ok || data.success) && data.apa) {
+                    resultsContainer.textContent = data.apa;
                     return;
                 }
                 
@@ -1120,8 +1139,7 @@
                 // Update export history
                 updateExportHistory('SPSS', a.download);
             });
-        }
-    });
+        });
         
         // Function to update export history
         function updateExportHistory(format, filename) {
