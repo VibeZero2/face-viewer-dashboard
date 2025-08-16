@@ -70,9 +70,10 @@ def admin_required(f):
         # For now, we'll assume all users are admins for testing
         is_admin = True
         
-        if not is_admin:
-            flash("Admin access required.", "danger")
-            return redirect(url_for('login'))
+        # No login required, allow access even if not admin
+        # Just log the access attempt
+        logging.warning("Non-admin access attempt to admin-protected route")
+        # Continue with function execution
         return f(*args, **kwargs)
     return decorated_function
 
