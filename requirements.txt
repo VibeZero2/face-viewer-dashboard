@@ -2,6 +2,7 @@
 # Build dependencies - must be first
 setuptools==69.0.3
 wheel==0.42.0
+
 # Core web framework
 Flask==2.3.3
 Flask-Login==0.6.2
@@ -10,13 +11,10 @@ Werkzeug==2.3.7
 
 # Data processing and visualization
 numpy==1.26.4
-pandas==2.2.0
+pandas>=2.2.0,<2.4.0
 plotly==5.18.0
-dash==2.14.1
-dash-bootstrap-components==1.5.0
 
 # Security and environment
-cryptography==41.0.3
 python-dotenv==1.0.0
 
 # Web server for production
@@ -24,7 +22,3 @@ gunicorn==21.2.0
 
 # HTTP requests
 requests==2.31.0
-
-# Optional R integration
-# Uncomment if needed and R is installed
-# rpy2==3.5.14
