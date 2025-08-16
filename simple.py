@@ -50,9 +50,11 @@ app.register_blueprint(admin_tools)
 
 @app.route('/')
 def index():
-    """Redirect to the dashboard page"""
-    from flask import redirect, url_for
-    return redirect(url_for('dashboard.dashboard'))
+    """Render the dashboard page directly"""
+    # Import the dashboard function from the dashboard blueprint
+    from routes.dashboard_no_pandas import dashboard
+    # Call the dashboard function directly
+    return dashboard()
     
 # Legacy index page, keeping for reference
 def legacy_index():
