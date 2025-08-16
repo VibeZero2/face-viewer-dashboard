@@ -1,13 +1,4 @@
 # RENDER_BUILD_WITH_PANDAS - August 16, 2025
-# Build dependencies
-setuptools==69.0.3
-wheel==0.42.0
-meson-python==0.15.0
-ninja==1.11.1
-
-# Analytics dependencies
-pandas==2.0.3
-
 # Core web framework
 Flask==2.3.3
 Flask-Login==0.6.2
@@ -16,6 +7,7 @@ Werkzeug==2.3.7
 
 # Data processing and visualization
 numpy==1.26.4
+pandas==2.0.3
 plotly==5.18.0
 dash==2.14.1
 dash-bootstrap-components==1.5.0
@@ -27,9 +19,9 @@ python-dotenv==1.0.0
 # Web server for production
 gunicorn==21.2.0
 
+# HTTP requests
+requests==2.31.0
+
 # Optional R integration
 # Uncomment if needed and R is installed
 # rpy2==3.5.14
-
-# HTTP requests
-requests==2.31.0

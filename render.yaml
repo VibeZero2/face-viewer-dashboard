@@ -2,9 +2,10 @@
 services:
   - type: web
     name: face-viewer-dashboard
-    env: docker
-    dockerfilePath: ./Dockerfile
-    dockerContext: .
+    env: python
+    runtime: python3.12.3
+    buildCommand: "pip install --upgrade pip && pip install setuptools==69.0.3 wheel==0.42.0 && pip install -r requirements.txt"
+    startCommand: "gunicorn wsgi:application"
     envVars:
       - key: FLASK_SECRET_KEY
         generateValue: true
