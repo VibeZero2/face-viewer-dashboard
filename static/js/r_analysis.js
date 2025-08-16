@@ -83,13 +83,14 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Form data:', formDataObj);
             
             // Send request to backend
-            console.log('Sending analysis request to /api/run_analysis');
-            fetch('/api/run_analysis', {
+            console.log('Sending analysis request to /api/run-analysis');
+            fetch('/api/run-analysis', {
                 method: 'POST',
                 headers: {
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
                 },
-                body: formData
+                body: JSON.stringify(formDataObj)
             })
             .then(response => {
                 console.log('Response status:', response.status);
