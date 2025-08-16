@@ -24,15 +24,19 @@ pip install --upgrade pip
 
 # Explicitly install build dependencies first
 echo "Explicitly installing build dependencies..."
-pip install setuptools==69.0.3 wheel==0.42.0
-pip install meson-python==0.15.0 ninja==1.11.1
+pip install --no-cache-dir setuptools==69.0.3 wheel==0.42.0
+pip install --no-cache-dir meson-python==0.15.0 ninja==1.11.1
 
-# Install dependencies from requirements.txt
-echo "Installing dependencies from requirements.txt..."
-pip install -r requirements.txt
+# Install numpy first (pandas dependency)
+echo "Installing numpy..."
+pip install --prefer-binary numpy==1.26.4
 
-# Explicitly install pandas
-echo "Explicitly installing pandas..."
-pip install pandas==2.0.3
+# Install pandas with binary preference
+echo "Installing pandas..."
+pip install --prefer-binary pandas==2.0.3
+
+# Install remaining dependencies from requirements.txt
+echo "Installing remaining dependencies from requirements.txt..."
+pip install --prefer-binary -r requirements.txt
 
 echo "Build completed successfully!"
