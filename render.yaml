@@ -3,7 +3,7 @@ services:
   - type: web
     name: face-viewer-dashboard
     env: python
-    runtime: python3.12
+    runtime: python3.12.3
     buildCommand: ""
     startCommand: gunicorn wsgi:application
     envVars:
