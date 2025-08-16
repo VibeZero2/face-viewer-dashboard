@@ -4,7 +4,7 @@ services:
     name: face-viewer-dashboard
     env: python
     runtime: python3.12.3
-    buildCommand: ""
+    buildCommand: "pip install --upgrade pip && pip install setuptools==69.0.3 wheel==0.42.0 meson-python==0.15.0 ninja==1.11.1 && pip install -r requirements.txt"
     startCommand: gunicorn wsgi:application
     envVars:
       - key: FLASK_SECRET_KEY
