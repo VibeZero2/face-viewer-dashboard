@@ -4,8 +4,8 @@ services:
     name: face-viewer-dashboard
     env: python
     runtime: python3.12.3
-    buildCommand: "pip install --upgrade pip && pip install flask gunicorn"
-    startCommand: "gunicorn minimal_app:app"
+    buildCommand: "pip install --upgrade pip && pip install flask gunicorn flask-cors"
+    startCommand: "gunicorn wsgi:application"
     envVars:
       - key: FLASK_SECRET_KEY
         generateValue: true
