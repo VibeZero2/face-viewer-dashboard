@@ -4,7 +4,8 @@ services:
     name: face-viewer-dashboard
     env: python
     runtime: python3.12.3
-    buildCommand: "pip install --upgrade pip && pip install --no-cache-dir setuptools==69.0.3 wheel==0.42.0 && pip install -r requirements.txt && pip install pandas==2.0.3"
+    preInstallCommand: "pip install --upgrade pip && PYTHONPATH=$PYTHONPATH:/opt/render/project/src/.venv/lib/python3.12/site-packages pip install --no-cache-dir setuptools==69.0.3 wheel==0.42.0"
+    buildCommand: "pip install -r requirements.txt && pip install pandas==2.0.3"
     startCommand: gunicorn wsgi:application
     envVars:
       - key: FLASK_SECRET_KEY
