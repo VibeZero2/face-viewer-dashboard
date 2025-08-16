@@ -12,8 +12,8 @@ Flask-WTF==1.1.1
 Werkzeug==2.3.7
 
 # Data processing and visualization
-numpy==1.26.4
-pandas==2.0.3
+numpy==1.26.4 --only-binary=numpy
+pandas==2.0.3 --only-binary=pandas
 plotly==5.18.0
 dash==2.14.1
 dash-bootstrap-components==1.5.0
