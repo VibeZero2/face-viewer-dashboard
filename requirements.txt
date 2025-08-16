@@ -1,4 +1,7 @@
 # RENDER_BUILD_WITH_PANDAS - August 16, 2025
+# Build dependencies - must be first
+setuptools==69.0.3
+wheel==0.42.0
 # Core web framework
 Flask==2.3.3
 Flask-Login==0.6.2
