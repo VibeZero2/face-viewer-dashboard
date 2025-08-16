@@ -1,10 +1,10 @@
-# Updated configuration to force deployment and block pandas
+# Updated configuration to use pandas for analytics
 services:
   - type: web
     name: face-viewer-dashboard
     env: python
     runtime: python3.12
-    buildCommand: ./build_clean.sh
+    buildCommand: pip install -r requirements.txt
     startCommand: gunicorn wsgi:application
     envVars:
       - key: FLASK_SECRET_KEY
