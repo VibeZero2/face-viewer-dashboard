@@ -1,0 +1,16 @@
+[build]
+  command = "pip install --upgrade pip && pip install setuptools==69.0.3 wheel==0.42.0 && pip install numpy==1.26.4 && pip install pandas>=2.2.0,<2.4.0 && pip install -r requirements.txt"
+  publish = "."
+
+[build.environment]
+  PYTHON_VERSION = "3.12.3"
+
+[dev]
+  command = "python app.py"
+  port = 5000
+  publish = "."
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

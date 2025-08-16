@@ -86,10 +86,9 @@ def logout():
 
 @app.route('/')
 def index():
-    return redirect(url_for('login'))
+    return redirect(url_for('dashboard'))
 
 @app.route('/dashboard')
-@login_required
 def dashboard():
     return render_template('dashboard.html', message='Dashboard is working with pandas!')
 
@@ -100,6 +99,11 @@ def health():
         'pandas_version': pd.__version__,
         'numpy_version': np.__version__
     })
+
+@app.route('/r-analysis')
+def r_analysis():
+    """Simple analytics page"""
+    return render_template('r_analysis.html', message='Analytics functionality is available!')
 
 # This is the standard WSGI application variable that Gunicorn looks for
 application = app

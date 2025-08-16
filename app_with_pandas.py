@@ -6,6 +6,9 @@ import plotly.graph_objects as go
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, send_file
+import tempfile
+import glob
+import shutil
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -241,10 +244,9 @@ def generate_trust_boxplot():
 # Dashboard routes
 @app.route('/')
 def index():
-    return redirect(url_for('login'))
+    return redirect(url_for('dashboard'))
 
 @app.route('/dashboard')
-@login_required
 def dashboard():
     participants = get_participant_files()
     summary_stats = generate_summary_stats()
@@ -260,7 +262,6 @@ def dashboard():
     )
 
 @app.route('/participant/<pid>')
-@login_required
 def participant_detail(pid):
     data = load_participant_data(pid)
     
@@ -320,7 +321,6 @@ def participant_detail(pid):
     )
 
 @app.route('/download/<pid>')
-@login_required
 def download_participant(pid):
     participants = get_participant_files()
     
@@ -337,7 +337,6 @@ def download_participant(pid):
         return redirect(url_for('dashboard'))
 
 @app.route('/download-all')
-@login_required
 def download_all():
     """Download all participant data as a ZIP file"""
     # Create a temporary directory to store files for zipping
@@ -390,7 +389,6 @@ def check_abandoned_sessions():
     return redirect(url_for('dashboard'))
 
 @app.route('/r-analysis')
-@login_required
 def r_analysis():
     """Run R analysis on the data."""
     try:
