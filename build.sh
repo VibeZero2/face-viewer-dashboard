@@ -33,7 +33,7 @@ pip install --prefer-binary numpy==1.26.4
 
 # Install pandas with binary preference
 echo "Installing pandas..."
-pip install --prefer-binary pandas==2.0.3
+pip install --prefer-binary pandas==2.2.0
 
 # Install remaining dependencies from requirements.txt
 echo "Installing remaining dependencies from requirements.txt..."
