@@ -3,6 +3,12 @@
 <h1 class="mb-4">Face Viewer Dashboard</h1>
 <p class="text-muted">Analysis and visualization of face perception data</p>
 
+{% if message %}
+<div class="alert alert-success">
+  {{ message }}
+</div>
+{% endif %}
+
 <div class="container-fluid mt-4">
   <!-- Summary Stats Section -->
   <div class="row g-2 mb-3">
