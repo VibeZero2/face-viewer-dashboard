@@ -5,6 +5,9 @@ wheel==0.42.0
 meson-python==0.15.0
 ninja==1.11.1
 
+# Analytics dependencies
+pandas==2.0.3
+
 # Core web framework
 Flask==2.3.3
 Flask-Login==0.6.2
