@@ -83,7 +83,6 @@ def logout():
 
 # Dashboard routes
 @admin_bp.route('/')
-@admin_auth.login_required
 def dashboard():
     """Admin dashboard route"""
     # Get user count
@@ -118,7 +117,6 @@ def dashboard():
 
 # User management routes
 @admin_bp.route('/users')
-@admin_auth.login_required
 @permissions.permission_required('manage_users')
 def users():
     """Admin user management route"""
@@ -128,7 +126,6 @@ def users():
     return render_template('admin/users.html', users=users, roles=roles.keys())
 
 @admin_bp.route('/users/add', methods=['POST'])
-@admin_auth.login_required
 @permissions.permission_required('manage_users')
 def add_user():
     """Add a new user"""
@@ -149,7 +146,6 @@ def add_user():
     return redirect(url_for('admin.users'))
 
 @admin_bp.route('/users/edit', methods=['POST'])
-@admin_auth.login_required
 @permissions.permission_required('manage_users')
 def edit_user():
     """Edit an existing user"""
@@ -181,7 +177,6 @@ def edit_user():
     return redirect(url_for('admin.users'))
 
 @admin_bp.route('/users/delete', methods=['POST'])
-@admin_auth.login_required
 @permissions.permission_required('manage_users')
 def delete_user():
     """Delete a user"""
@@ -205,7 +200,6 @@ def delete_user():
 
 # Roles and permissions routes
 @admin_bp.route('/roles')
-@admin_auth.login_required
 @permissions.permission_required('manage_permissions')
 def roles():
     """Admin roles and permissions management route"""
@@ -215,7 +209,6 @@ def roles():
     return render_template('admin/roles.html', roles=roles, permissions=all_permissions)
 
 @admin_bp.route('/roles/add', methods=['POST'])
-@admin_auth.login_required
 @permissions.permission_required('manage_permissions')
 def add_role():
     """Add a new role"""
@@ -241,7 +234,6 @@ def add_role():
     return redirect(url_for('admin.roles'))
 
 @admin_bp.route('/roles/edit', methods=['POST'])
-@admin_auth.login_required
 @permissions.permission_required('manage_permissions')
 def edit_role():
     """Edit an existing role"""
@@ -267,7 +259,6 @@ def edit_role():
     return redirect(url_for('admin.roles'))
 
 @admin_bp.route('/roles/delete', methods=['POST'])
-@admin_auth.login_required
 @permissions.permission_required('manage_permissions')
 def delete_role():
     """Delete a role"""
@@ -290,7 +281,6 @@ def delete_role():
     return redirect(url_for('admin.roles'))
 
 @admin_bp.route('/permissions/add', methods=['POST'])
-@admin_auth.login_required
 @permissions.permission_required('manage_permissions')
 def add_permission():
     """Add a new permission"""
@@ -309,7 +299,6 @@ def add_permission():
     return redirect(url_for('admin.roles'))
 
 @admin_bp.route('/permissions/delete', methods=['POST'])
-@admin_auth.login_required
 @permissions.permission_required('manage_permissions')
 def delete_permission():
     """Delete a permission"""
@@ -334,7 +323,6 @@ def delete_permission():
 
 # Audit log routes
 @admin_bp.route('/audit-logs')
-@admin_auth.login_required
 @permissions.permission_required('view_audit_logs')
 def audit_logs():
     """Admin audit logs route"""
@@ -381,7 +369,6 @@ def audit_logs():
                           users_list=users_list)
 
 @admin_bp.route('/api/logs/<log_id>')
-@admin_auth.login_required
 @permissions.permission_required('view_audit_logs')
 def get_log_details(log_id):
     """API endpoint to get log details"""
@@ -392,7 +379,6 @@ def get_log_details(log_id):
         return jsonify({'error': 'Log not found'}), 404
 
 @admin_bp.route('/export-logs')
-@admin_auth.login_required
 @permissions.permission_required('view_audit_logs')
 def export_logs():
     """Export audit logs to CSV"""
@@ -435,7 +421,6 @@ def export_logs():
 
 # Settings routes
 @admin_bp.route('/settings')
-@admin_auth.login_required
 @permissions.permission_required('manage_users')
 def settings():
     """Admin settings route"""
@@ -472,7 +457,6 @@ def settings():
     return render_template('admin/settings.html', settings=settings)
 
 @admin_bp.route('/settings/update', methods=['POST'])
-@admin_auth.login_required
 @permissions.permission_required('manage_users')
 def update_settings():
     """Update admin settings"""
@@ -521,7 +505,6 @@ def update_settings():
 
 # Health check route
 @admin_bp.route('/health')
-@admin_auth.login_required
 def health():
     """Admin health check route"""
     # Get system health information
