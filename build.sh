@@ -22,8 +22,17 @@ touch "$(pwd)/static/.gitkeep"
 echo "Updating pip..."
 pip install --upgrade pip
 
+# Explicitly install build dependencies first
+echo "Explicitly installing build dependencies..."
+pip install setuptools==69.0.3 wheel==0.42.0
+pip install meson-python==0.15.0 ninja==1.11.1
+
 # Install dependencies from requirements.txt
 echo "Installing dependencies from requirements.txt..."
 pip install -r requirements.txt
+
+# Explicitly install pandas
+echo "Explicitly installing pandas..."
+pip install pandas==2.0.3
 
 echo "Build completed successfully!"
