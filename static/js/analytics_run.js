@@ -60,12 +60,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const payload = {
             test: testSelect.value,
             dv: dvSelect.value,
+            variables: {},
             filters: {}
         };
         
         // Add secondary variable if selected
         if (secondaryVarSelect.value) {
-            payload.secondary_variable = secondaryVarSelect.value;
+            payload.variables.secondary_variable = secondaryVarSelect.value;
         }
         
         // Add filters
@@ -90,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Send request to backend
-        fetch('/api/run_analysis', {
+        fetch('/api/run-analysis', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
