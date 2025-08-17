@@ -15,9 +15,19 @@ from .audit import AuditLog
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 # Initialize modules
+from flask import current_app
 admin_auth = None
 permissions = None
 audit_log = None
+
+# Create a function to get permissions that will work even before initialization
+def get_permissions():
+    global permissions
+    if permissions is None:
+        from admin.permissions import Permissions
+        app = current_app._get_current_object()
+        permissions = Permissions(app)
+    return permissions
 
 def init_admin(app):
     """Initialize admin module with Flask app"""
@@ -147,7 +157,7 @@ def dashboard():
 
 # User management routes
 @admin_bp.route('/users')
-@permissions.permission_required('manage_users')
+@get_permissions().permission_required('manage_users')
 def users():
     """Admin user management route"""
     users = admin_auth._load_users()
@@ -156,7 +166,7 @@ def users():
     return render_template('admin/users.html', users=users, roles=roles.keys())
 
 @admin_bp.route('/users/add', methods=['POST'])
-@permissions.permission_required('manage_users')
+@get_permissions().permission_required('manage_users')
 def add_user():
     """Add a new user"""
     username = request.form.get('username')
@@ -176,7 +186,7 @@ def add_user():
     return redirect(url_for('admin.users'))
 
 @admin_bp.route('/users/edit', methods=['POST'])
-@permissions.permission_required('manage_users')
+@get_permissions().permission_required('manage_users')
 def edit_user():
     """Edit an existing user"""
     username = request.form.get('username')
@@ -207,7 +217,7 @@ def edit_user():
     return redirect(url_for('admin.users'))
 
 @admin_bp.route('/users/delete', methods=['POST'])
-@permissions.permission_required('manage_users')
+@get_permissions().permission_required('manage_users')
 def delete_user():
     """Delete a user"""
     username = request.form.get('username')
@@ -230,7 +240,7 @@ def delete_user():
 
 # Roles and permissions routes
 @admin_bp.route('/roles')
-@permissions.permission_required('manage_permissions')
+@get_permissions().permission_required('manage_permissions')
 def roles():
     """Admin roles and permissions management route"""
     roles = permissions.get_roles()
@@ -239,7 +249,7 @@ def roles():
     return render_template('admin/roles.html', roles=roles, permissions=all_permissions)
 
 @admin_bp.route('/roles/add', methods=['POST'])
-@permissions.permission_required('manage_permissions')
+@get_permissions().permission_required('manage_permissions')
 def add_role():
     """Add a new role"""
     role_name = request.form.get('role_name')
@@ -264,7 +274,7 @@ def add_role():
     return redirect(url_for('admin.roles'))
 
 @admin_bp.route('/roles/edit', methods=['POST'])
-@permissions.permission_required('manage_permissions')
+@get_permissions().permission_required('manage_permissions')
 def edit_role():
     """Edit an existing role"""
     role_name = request.form.get('role_name')
@@ -289,7 +299,7 @@ def edit_role():
     return redirect(url_for('admin.roles'))
 
 @admin_bp.route('/roles/delete', methods=['POST'])
-@permissions.permission_required('manage_permissions')
+@get_permissions().permission_required('manage_permissions')
 def delete_role():
     """Delete a role"""
     role_name = request.form.get('role_name')
@@ -311,7 +321,7 @@ def delete_role():
     return redirect(url_for('admin.roles'))
 
 @admin_bp.route('/permissions/add', methods=['POST'])
-@permissions.permission_required('manage_permissions')
+@get_permissions().permission_required('manage_permissions')
 def add_permission():
     """Add a new permission"""
     permission_name = request.form.get('permission_name')
@@ -329,7 +339,7 @@ def add_permission():
     return redirect(url_for('admin.roles'))
 
 @admin_bp.route('/permissions/delete', methods=['POST'])
-@permissions.permission_required('manage_permissions')
+@get_permissions().permission_required('manage_permissions')
 def delete_permission():
     """Delete a permission"""
     permission_name = request.form.get('permission_name')
@@ -353,7 +363,7 @@ def delete_permission():
 
 # Audit log routes
 @admin_bp.route('/audit-logs')
-@permissions.permission_required('view_audit_logs')
+@get_permissions().permission_required('view_audit_logs')
 def audit_logs():
     """Admin audit logs route"""
     page = int(request.args.get('page', 1))
@@ -399,7 +409,7 @@ def audit_logs():
                           users_list=users_list)
 
 @admin_bp.route('/api/logs/<log_id>')
-@permissions.permission_required('view_audit_logs')
+@get_permissions().permission_required('view_audit_logs')
 def get_log_details(log_id):
     """API endpoint to get log details"""
     log = audit_log.get_log_by_id(log_id)
@@ -409,7 +419,7 @@ def get_log_details(log_id):
         return jsonify({'error': 'Log not found'}), 404
 
 @admin_bp.route('/export-logs')
-@permissions.permission_required('view_audit_logs')
+@get_permissions().permission_required('view_audit_logs')
 def export_logs():
     """Export audit logs to CSV"""
     # Get filter parameters
@@ -451,7 +461,7 @@ def export_logs():
 
 # Settings routes
 @admin_bp.route('/settings')
-@permissions.permission_required('manage_users')
+@get_permissions().permission_required('manage_users')
 def settings():
     """Admin settings route"""
     # Load settings from file
@@ -487,7 +497,7 @@ def settings():
     return render_template('admin/settings.html', settings=settings)
 
 @admin_bp.route('/settings/update', methods=['POST'])
-@permissions.permission_required('manage_users')
+@get_permissions().permission_required('manage_users')
 def update_settings():
     """Update admin settings"""
     settings_type = request.form.get('settings_type')
