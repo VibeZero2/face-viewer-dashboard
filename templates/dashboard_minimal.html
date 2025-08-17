@@ -1,0 +1,131 @@
+{% extends "base_minimal.html" %}
+
+{% block title %}Dashboard - Face Viewer{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mb-4">Dashboard</h1>
+        
+        {% if error_message %}
+        <div class="alert alert-danger">
+            <strong>Error:</strong> {{ error_message }}
+        </div>
+        {% endif %}
+        
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-bar me-2"></i> Summary Statistics
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Participants</h5>
+                                <h2>{{ summary_stats.n_participants }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Responses</h5>
+                                <h2>{{ summary_stats.n_responses }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Avg. Trust</h5>
+                                <h2>{{ "%.1f"|format(summary_stats.trust_mean) }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Trust SD</h5>
+                                <h2>{{ "%.1f"|format(summary_stats.trust_sd) }}</h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-pie me-2"></i> Trust Ratings Distribution
+            </div>
+            <div class="card-body">
+                <div id="trust-histogram"></div>
+                {% if use_demo_data %}
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle me-2"></i> Demo data is being displayed. No actual data found.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-chart-line me-2"></i> Trust by Face Version
+            </div>
+            <div class="card-body">
+                <div id="trust-boxplot"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <i class="fas fa-info-circle me-2"></i> Status
+            </div>
+            <div class="card-body">
+                {% if data_file_exists %}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i> Data files found and loaded successfully.
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i> No data files found. Please check the data directory.
+                </div>
+                {% endif %}
+                
+                <p>
+                    <strong>Server Status:</strong> Running on port 5000<br>
+                    <strong>Data Directory:</strong> <code>./data</code><br>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Trust histogram
+        const histogramData = {{ trust_histogram|tojson }};
+        if (histogramData && histogramData.data) {
+            Plotly.newPlot('trust-histogram', histogramData.data, histogramData.layout || {});
+        }
+        
+        // Trust boxplot
+        const boxplotData = {{ trust_boxplot|tojson }};
+        if (boxplotData && boxplotData.data) {
+            Plotly.newPlot('trust-boxplot', boxplotData.data, boxplotData.layout || {});
+        }
+    });
+</script>
+{% endblock %}

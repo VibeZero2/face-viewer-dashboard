@@ -148,7 +148,7 @@ class AdminAuth:
         @wraps(f)
         def decorated_function(*args, **kwargs):
             if not self.is_authenticated():
-                return redirect(url_for('admin_login', next=request.url))
+                return redirect(url_for('admin.login', next=request.url))
             return f(*args, **kwargs)
         return decorated_function
         
@@ -158,7 +158,7 @@ class AdminAuth:
             @wraps(f)
             def decorated_function(*args, **kwargs):
                 if not self.is_authenticated():
-                    return redirect(url_for('admin_login', next=request.url))
+                    return redirect(url_for('admin.login', next=request.url))
                     
                 if session.get('admin_role') != role:
                     flash('You do not have permission to access this page', 'danger')

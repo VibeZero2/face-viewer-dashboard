@@ -1,0 +1,486 @@
+{% extends "base_simple.html" %}
+
+{% block title %}SPSS Analysis Tools - Face Viewer Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+            <div class="position-sticky pt-3">
+                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                    <span>Analytics</span>
+                </h6>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('analytics.dashboard') }}">
+                            <i class="bi bi-graph-up me-2"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('analytics.reports') }}">
+                            <i class="bi bi-file-earmark-bar-graph me-2"></i>Reports
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('analytics.export') }}">
+                            <i class="bi bi-download me-2"></i>Export
+                        </a>
+                    </li>
+                </ul>
+                
+                <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted">
+                    <span>Analysis Tools</span>
+                </h6>
+                <ul class="nav flex-column mb-2">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('analytics.r_tools') }}">
+                            <i class="bi bi-code-square me-2"></i>R Tools
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{{ url_for('analytics.spss_tools') }}">
+                            <i class="bi bi-calculator me-2"></i>SPSS Tools
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">SPSS Analysis Tools</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshDataBtn">
+                        <i class="bi bi-arrow-repeat me-1"></i>Refresh Data
+                    </button>
+                </div>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">SPSS Analysis</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                SPSS integration tools allow you to perform advanced statistical analysis on your face perception data.
+                            </div>
+                            
+                            <form id="spssAnalysisForm">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="analysisType">Analysis Type</label>
+                                            <select class="form-select" id="analysisType" name="analysisType">
+                                                <option value="descriptive">Descriptive Statistics</option>
+                                                <option value="ttest">Independent Samples T-Test</option>
+                                                <option value="pairedttest">Paired Samples T-Test</option>
+                                                <option value="anova">One-Way ANOVA</option>
+                                                <option value="correlation">Correlation Analysis</option>
+                                                <option value="regression">Linear Regression</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="dataSource">Data Source</label>
+                                            <select class="form-select" id="dataSource" name="dataSource">
+                                                <option value="all">All Participant Data</option>
+                                                <option value="trust">Trust Ratings Only</option>
+                                                <option value="masculinity">Masculinity Ratings Only</option>
+                                                <option value="symmetry">Symmetry Scores Only</option>
+                                                <option value="custom">Custom Selection</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-3" id="variablesSection">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="dependentVariables">Dependent Variable(s)</label>
+                                            <select class="form-select" id="dependentVariables" name="dependentVariables" multiple>
+                                                <option value="trust_rating">Trust Rating</option>
+                                                <option value="symmetry_score">Symmetry Score</option>
+                                                <option value="masculinity_left">Masculinity (Left)</option>
+                                                <option value="masculinity_right">Masculinity (Right)</option>
+                                                <option value="femininity_left">Femininity (Left)</option>
+                                                <option value="femininity_right">Femininity (Right)</option>
+                                            </select>
+                                            <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple variables</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="independentVariables">Independent/Grouping Variable(s)</label>
+                                            <select class="form-select" id="independentVariables" name="independentVariables" multiple>
+                                                <option value="face_version">Face Version</option>
+                                                <option value="participant_gender">Participant Gender</option>
+                                                <option value="participant_age">Participant Age Group</option>
+                                                <option value="face_id">Face ID</option>
+                                            </select>
+                                            <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple variables</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="outputFormat">Output Format</label>
+                                            <select class="form-select" id="outputFormat" name="outputFormat">
+                                                <option value="html">HTML Report</option>
+                                                <option value="spv">SPSS Viewer File (.spv)</option>
+                                                <option value="pdf">PDF Report</option>
+                                                <option value="csv">CSV Results</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label for="options">Additional Options</label>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="includeCharts" name="includeCharts" checked>
+                                                <label class="form-check-label" for="includeCharts">
+                                                    Include Charts
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="includeDescriptives" name="includeDescriptives" checked>
+                                                <label class="form-check-label" for="includeDescriptives">
+                                                    Include Descriptive Statistics
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <button type="button" class="btn btn-secondary me-md-2" id="resetFormBtn">Reset</button>
+                                    <button type="submit" class="btn btn-primary" id="runAnalysisBtn">
+                                        <i class="bi bi-play-fill me-1"></i>Run Analysis
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Analysis Results</h5>
+                            <button class="btn btn-sm btn-outline-secondary" id="downloadResultsBtn" disabled>
+                                <i class="bi bi-download me-1"></i>Download Results
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="analysisResults">
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i>Select analysis options above and click "Run Analysis" to see results.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle form submission
+        document.getElementById('spssAnalysisForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form values
+            const analysisType = document.getElementById('analysisType').value;
+            const dataSource = document.getElementById('dataSource').value;
+            
+            // Get selected dependent variables
+            const dependentVariablesSelect = document.getElementById('dependentVariables');
+            const dependentVariables = Array.from(dependentVariablesSelect.selectedOptions).map(option => option.value);
+            
+            // Get selected independent variables
+            const independentVariablesSelect = document.getElementById('independentVariables');
+            const independentVariables = Array.from(independentVariablesSelect.selectedOptions).map(option => option.value);
+            
+            // Validate selections
+            if (dependentVariables.length === 0) {
+                alert('Please select at least one dependent variable.');
+                return;
+            }
+            
+            if (['ttest', 'anova', 'regression'].includes(analysisType) && independentVariables.length === 0) {
+                alert('Please select at least one independent/grouping variable.');
+                return;
+            }
+            
+            // Show loading state
+            document.getElementById('analysisResults').innerHTML = `
+                <div class="d-flex justify-content-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <p class="text-center mt-2">Running ${analysisType} analysis...</p>
+            `;
+            
+            // In a real implementation, this would make an API call to run the SPSS analysis
+            // For now, we'll simulate a response after a delay
+            setTimeout(function() {
+                // Enable download button
+                document.getElementById('downloadResultsBtn').disabled = false;
+                
+                // Display mock results based on analysis type
+                let resultsHTML = '';
+                
+                switch(analysisType) {
+                    case 'descriptive':
+                        resultsHTML = `
+                            <h4>Descriptive Statistics</h4>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Variable</th>
+                                            <th>N</th>
+                                            <th>Mean</th>
+                                            <th>Std. Deviation</th>
+                                            <th>Minimum</th>
+                                            <th>Maximum</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Trust Rating</td>
+                                            <td>120</td>
+                                            <td>4.32</td>
+                                            <td>1.21</td>
+                                            <td>1.00</td>
+                                            <td>7.00</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Symmetry Score</td>
+                                            <td>120</td>
+                                            <td>0.78</td>
+                                            <td>0.15</td>
+                                            <td>0.42</td>
+                                            <td>0.95</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Masculinity (Left)</td>
+                                            <td>120</td>
+                                            <td>3.85</td>
+                                            <td>1.45</td>
+                                            <td>1.20</td>
+                                            <td>6.80</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Masculinity (Right)</td>
+                                            <td>120</td>
+                                            <td>4.12</td>
+                                            <td>1.38</td>
+                                            <td>1.50</td>
+                                            <td>6.90</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="alert alert-success mt-3">
+                                <i class="bi bi-check-circle me-2"></i>Descriptive statistics calculated successfully.
+                            </div>
+                        `;
+                        break;
+                        
+                    case 'ttest':
+                        resultsHTML = `
+                            <h4>Independent Samples T-Test</h4>
+                            <p><strong>Dependent Variable:</strong> Trust Rating</p>
+                            <p><strong>Grouping Variable:</strong> Face Version (Left Half vs. Right Half)</p>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-striped table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Group</th>
+                                            <th>N</th>
+                                            <th>Mean</th>
+                                            <th>Std. Deviation</th>
+                                            <th>Std. Error Mean</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Left Half</td>
+                                            <td>60</td>
+                                            <td>4.15</td>
+                                            <td>1.25</td>
+                                            <td>0.16</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Right Half</td>
+                                            <td>60</td>
+                                            <td>4.48</td>
+                                            <td>1.18</td>
+                                            <td>0.15</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <h5 class="mt-4">T-Test Results</h5>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>t</th>
+                                            <th>df</th>
+                                            <th>Sig. (2-tailed)</th>
+                                            <th>Mean Difference</th>
+                                            <th>Std. Error Difference</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>-1.52</td>
+                                            <td>118</td>
+                                            <td>0.131</td>
+                                            <td>-0.33</td>
+                                            <td>0.22</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="alert alert-info mt-3">
+                                <i class="bi bi-info-circle me-2"></i>The difference in trust ratings between left and right face halves was not statistically significant (p = 0.131).
+                            </div>
+                        `;
+                        break;
+                        
+                    case 'correlation':
+                        resultsHTML = `
+                            <h4>Correlation Analysis</h4>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Variables</th>
+                                            <th>Pearson Correlation</th>
+                                            <th>Sig. (2-tailed)</th>
+                                            <th>N</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Trust Rating & Symmetry Score</td>
+                                            <td>0.65</td>
+                                            <td>0.001</td>
+                                            <td>120</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Trust Rating & Masculinity (Left)</td>
+                                            <td>0.28</td>
+                                            <td>0.042</td>
+                                            <td>120</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Trust Rating & Masculinity (Right)</td>
+                                            <td>0.32</td>
+                                            <td>0.021</td>
+                                            <td>120</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Symmetry Score & Masculinity (Left)</td>
+                                            <td>0.18</td>
+                                            <td>0.215</td>
+                                            <td>120</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Symmetry Score & Masculinity (Right)</td>
+                                            <td>0.22</td>
+                                            <td>0.112</td>
+                                            <td>120</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="alert alert-success mt-3">
+                                <i class="bi bi-check-circle me-2"></i>Significant positive correlation found between trust ratings and face symmetry (r = 0.65, p < 0.001).
+                            </div>
+                        `;
+                        break;
+                        
+                    default:
+                        resultsHTML = `
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>Analysis results would appear here in the production version.
+                            </div>
+                        `;
+                }
+                
+                document.getElementById('analysisResults').innerHTML = resultsHTML;
+            }, 1500);
+        });
+        
+        // Handle reset button
+        document.getElementById('resetFormBtn').addEventListener('click', function() {
+            document.getElementById('spssAnalysisForm').reset();
+            document.getElementById('analysisResults').innerHTML = `
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>Select analysis options above and click "Run Analysis" to see results.
+                </div>
+            `;
+            document.getElementById('downloadResultsBtn').disabled = true;
+        });
+        
+        // Handle download results button
+        document.getElementById('downloadResultsBtn').addEventListener('click', function() {
+            alert('In the production version, this would download the analysis results in the selected format.');
+        });
+        
+        // Update form based on analysis type selection
+        document.getElementById('analysisType').addEventListener('change', function() {
+            const analysisType = this.value;
+            const independentVariablesSelect = document.getElementById('independentVariables');
+            
+            // Enable/disable and update labels based on analysis type
+            if (analysisType === 'descriptive') {
+                independentVariablesSelect.disabled = true;
+                document.querySelector('label[for="independentVariables"]').textContent = 'Grouping Variables (Optional)';
+            } else if (analysisType === 'correlation') {
+                independentVariablesSelect.disabled = true;
+                document.querySelector('label[for="dependentVariables"]').textContent = 'Variables to Correlate';
+                document.querySelector('label[for="independentVariables"]').textContent = 'Grouping Variables (Optional)';
+            } else if (analysisType === 'regression') {
+                independentVariablesSelect.disabled = false;
+                document.querySelector('label[for="dependentVariables"]').textContent = 'Dependent Variable';
+                document.querySelector('label[for="independentVariables"]').textContent = 'Independent Variables (Predictors)';
+            } else {
+                independentVariablesSelect.disabled = false;
+                document.querySelector('label[for="dependentVariables"]').textContent = 'Dependent Variable(s)';
+                document.querySelector('label[for="independentVariables"]').textContent = 'Independent/Grouping Variable(s)';
+            }
+        });
+    });
+</script>
+{% endblock %}

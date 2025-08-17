@@ -3,9 +3,10 @@ Dashboard routes for Face Viewer Dashboard
 Uses cached statistics to prevent numbers from changing on refresh
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from utils.dashboard_stats_no_pandas import get_summary_stats, get_recent_activity
 from utils.participants_no_pandas import get_all_participants
+from admin.auth import AdminAuth
 import os
 import logging
 
@@ -19,6 +20,10 @@ dashboard_bp = Blueprint('dashboard', __name__)
 @dashboard_bp.route('/dashboard')
 def dashboard():
     """Display the main dashboard with fresh statistics"""
+    # Check if user is authenticated
+    admin_auth = current_app.config.get('admin_auth')
+    if admin_auth and not admin_auth.is_authenticated():
+        return redirect(url_for('admin.login', next=request.url))
     try:
         # Check if data directory exists
         data_dir = os.path.join(os.getcwd(), 'data')

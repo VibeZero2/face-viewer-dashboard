@@ -39,12 +39,18 @@ from routes.backups_no_pandas import backups_bp
 from routes.export_no_pandas import export_bp
 from routes.analytics_no_pandas import analytics_bp
 from routes.admin_tools import admin_tools
+from admin.routes import admin_bp, init_admin
+
 app.register_blueprint(participants_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(backups_bp)
 app.register_blueprint(export_bp)
 app.register_blueprint(analytics_bp)
 app.register_blueprint(admin_tools)
+app.register_blueprint(admin_bp, url_prefix='/admin')
+
+# Initialize admin module
+init_admin(app)
 
 # Define routes
 @app.route('/')
@@ -52,82 +58,7 @@ def index():
     # Redirect root URL to the dashboard page
     return redirect(url_for('dashboard.dashboard'))
 
-@app.route('/dashboard')
-def dashboard():
-    # Get cached summary statistics
-    stats = get_summary_stats()
-    
-    # Get recent activity
-    recent_activity = get_recent_activity(limit=5)
-    
-    # Prepare chart data based on actual statistics
-    trust_distribution = {
-        'labels': ['1', '2', '3', '4', '5', '6', '7'],
-        'datasets': [{
-            'label': 'Trust Ratings',
-            'data': stats.get('trust_distribution', [0, 0, 0, 0, 0, 0, 0]),
-            'backgroundColor': 'rgba(255, 193, 7, 0.5)',
-            'borderColor': 'rgba(255, 193, 7, 1)',
-            'borderWidth': 1
-        }]
-    }
-    
-    symmetry_data = {
-        'labels': stats.get('face_labels', [f'Face {i+1}' for i in range(10)]),
-        'datasets': [{
-            'label': 'Symmetry Score',
-            'data': stats.get('symmetry_scores', []),
-            'backgroundColor': 'rgba(13, 110, 253, 0.5)',
-            'borderColor': 'rgba(13, 110, 253, 1)',
-            'borderWidth': 1
-        }]
-    }
-    
-    masculinity_data = {
-        'labels': stats.get('face_labels', [f'Face {i+1}' for i in range(10)]),
-        'datasets': [
-            {
-                'label': 'Left Side',
-                'data': stats.get('masculinity_left', []),
-                'backgroundColor': 'rgba(220, 53, 69, 0.5)',
-                'borderColor': 'rgba(220, 53, 69, 1)',
-                'borderWidth': 1
-            },
-            {
-                'label': 'Right Side',
-                'data': stats.get('masculinity_right', []),
-                'backgroundColor': 'rgba(25, 135, 84, 0.5)',
-                'borderColor': 'rgba(25, 135, 84, 1)',
-                'borderWidth': 1
-            }
-        ]
-    }
-    
-    # Format summary stats for template
-    summary_stats = {
-        'total_participants': stats.get('n_participants', 0),
-        'total_responses': stats.get('n_responses', 0),
-        'avg_trust_rating': stats.get('trust_mean', 0),
-        'std_trust_rating': stats.get('trust_sd', 0),
-        'trust_by_version': {
-            'Full Face': stats.get('trust_full_mean', 0),
-            'Left Half': stats.get('trust_left_mean', 0),
-            'Right Half': stats.get('trust_right_mean', 0)
-        }
-    }
-    
-    # Get participant data
-    participants = stats.get('participants', {})
-    
-    # Render dashboard template
-    return render_template('dashboard.html', 
-                           title='Dashboard',
-                           summary_stats=summary_stats,
-                           participants=participants,
-                           recent_activity=recent_activity,
-                           trust_distribution=json.dumps(trust_distribution),
-                           symmetry_data=json.dumps(symmetry_data),
-                           masculinity_data=json.dumps(masculinity_data))
+# Dashboard route is now handled by the dashboard_no_pandas blueprint
 
 @app.route('/health')
 @app.route('/healthz')
@@ -172,6 +103,17 @@ def clear_all_cache():
     """Clear all cache entries"""
     clear_cache()
     return jsonify({'success': True, 'message': 'Cache cleared successfully'})
+
+# Add login and register redirect routes
+@app.route('/login')
+def login_redirect():
+    """Redirect to admin login page"""
+    return redirect(url_for('admin.login'))
+
+@app.route('/register')
+def register_redirect():
+    """Redirect to admin registration page"""
+    return redirect(url_for('admin.register'))
 
 # This ensures that if anything imports from this file, it gets the pandas-free version
 print("Using completely pandas-free app")

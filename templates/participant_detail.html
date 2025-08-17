@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_simple.html" %}
 
 {% block title %}Participant {{ pid }} - Face Viewer Dashboard{% endblock %}
 
@@ -150,11 +150,15 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const trustHistData = {{ trust_hist|safe }};
-        Plotly.newPlot('trust-hist', trustHistData.data, trustHistData.layout);
+        const trustHistData = {{ trust_hist|default('{}') |safe }};
+        if (trustHistData && trustHistData.data) {
+            Plotly.newPlot('trust-hist', trustHistData.data, trustHistData.layout);
+        }
         
-        const trustByFaceData = {{ trust_by_face|safe }};
-        Plotly.newPlot('trust-by-face', trustByFaceData.data, trustByFaceData.layout);
+        const trustByFaceData = {{ trust_by_face|default('{}') |safe }};
+        if (trustByFaceData && trustByFaceData.data) {
+            Plotly.newPlot('trust-by-face', trustByFaceData.data, trustByFaceData.layout);
+        }
     });
 </script>
 {% endblock %}

@@ -37,22 +37,19 @@ def init_admin(app):
     admin_auth = AdminAuth(app)
     permissions = Permissions(app)
     audit_log = AuditLog(app)
+
+# Error handlers
+@admin_bp.errorhandler(403)
+def forbidden(e):
+    return render_template('admin/error.html', error_code=403, error_message="Forbidden: You don't have permission to access this resource"), 403
     
-    # Register blueprint with app
-    app.register_blueprint(admin_bp)
+@admin_bp.errorhandler(404)
+def not_found(e):
+    return render_template('admin/error.html', error_code=404, error_message="Not Found: The requested resource was not found"), 404
     
-    # Set up error handlers
-    @admin_bp.errorhandler(403)
-    def forbidden(e):
-        return render_template('admin/error.html', error_code=403, error_message="Forbidden: You don't have permission to access this resource"), 403
-        
-    @admin_bp.errorhandler(404)
-    def not_found(e):
-        return render_template('admin/error.html', error_code=404, error_message="Not Found: The requested resource was not found"), 404
-        
-    @admin_bp.errorhandler(500)
-    def server_error(e):
-        return render_template('admin/error.html', error_code=500, error_message="Server Error: An internal error occurred"), 500
+@admin_bp.errorhandler(500)
+def server_error(e):
+    return render_template('admin/error.html', error_code=500, error_message="Server Error: An internal error occurred"), 500
 
 # Authentication routes
 @admin_bp.route('/login', methods=['GET', 'POST'])

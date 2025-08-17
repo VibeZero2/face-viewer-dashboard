@@ -72,5 +72,25 @@ def create_test_participant_data(num_participants=5, responses_per_participant=1
 
 if __name__ == "__main__":
     # Generate test data
-    create_test_participant_data(num_participants=5, responses_per_participant=10)
+    print(f"Starting test data generation in {RESPONSES_DIR}")
+    print(f"Current working directory: {os.getcwd()}")
+    
+    try:
+        # Create more test data for better visualization
+        create_test_participant_data(num_participants=20, responses_per_participant=10)
+        print("Test data generation completed successfully!")
+    except Exception as e:
+        print(f"Error generating test data: {e}")
+    
+    # List the files created
+    try:
+        files = os.listdir(RESPONSES_DIR)
+        print(f"Files in {RESPONSES_DIR}: {len(files)} files")
+        for file in files[:5]:  # Show first 5 files
+            print(f"  - {file}")
+        if len(files) > 5:
+            print(f"  - ... and {len(files) - 5} more files")
+    except Exception as e:
+        print(f"Error listing directory: {e}")
+    
     print("Done!")
