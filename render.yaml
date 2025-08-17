@@ -1,11 +1,11 @@
-# Minimal configuration without login requirements
+# Face Viewer Dashboard configuration
 services:
   - type: web
     name: face-viewer-dashboard
     env: python
     runtime: python3.12.3
-    buildCommand: "pip install --upgrade pip && pip install flask gunicorn flask-cors"
-    startCommand: "gunicorn wsgi:application"
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    startCommand: "gunicorn app_production_5000:app"
     envVars:
       - key: FLASK_SECRET_KEY
         generateValue: true
