@@ -20,17 +20,18 @@ from routes.analytics_no_pandas import analytics_bp
 from routes.export_no_pandas import export_bp
 from routes.participants_no_pandas import participants_bp
 from routes.admin_tools import admin_tools
-from admin.routes import admin_bp
 
 # Initialize Flask app
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('DASHBOARD_SECRET_KEY', os.urandom(24).hex())
 
-# Initialize admin authentication
+# Initialize admin authentication and permissions
 from admin.auth import AdminAuth
 from admin.audit import AuditLog
+from admin.permissions import Permissions
 admin_auth = AdminAuth(app)
 audit_log = AuditLog(app)
+permissions = Permissions(app)
 
 # Setup logging
 logging.basicConfig(
@@ -54,16 +55,17 @@ app.register_blueprint(participants_bp)
 app.register_blueprint(api_bp)
 app.register_blueprint(api_variables_bp)
 app.register_blueprint(admin_tools)
+
+# Import and register admin blueprint after permissions are initialized
+from admin.routes import admin_bp
 app.register_blueprint(admin_bp, url_prefix='/admin')
 
+# Root route
 @app.route('/')
 def index():
-    """Render the dashboard page with login option"""
-    # Import the dashboard function from the dashboard blueprint
-    from routes.dashboard_no_pandas import dashboard
-    # Call the dashboard function directly
-    return dashboard()
+    return render_template('dashboard.html')
 
+# Redirect routes for login and registration
 @app.route('/login')
 def login_redirect():
     """Redirect to admin login page"""
