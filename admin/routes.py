@@ -24,9 +24,10 @@ audit_log = None
 def get_permissions():
     global permissions
     if permissions is None:
+        # Don't try to access current_app during module import
+        # Just return a placeholder that will be replaced during init_admin
         from admin.permissions import Permissions
-        app = current_app._get_current_object()
-        permissions = Permissions(app)
+        permissions = Permissions()
     return permissions
 
 def init_admin(app):
