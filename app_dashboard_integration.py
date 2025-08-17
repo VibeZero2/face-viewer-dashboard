@@ -13,8 +13,12 @@ def integrate_dashboard(app):
     # Import dashboard blueprint
     from routes.dashboard import dashboard_bp
     
-    # Register blueprint
+    # Import admin_tools blueprint
+    from routes.admin_tools import admin_tools
+    
+    # Register blueprints
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(admin_tools)
     
     # Add URL rule for convenience
     app.add_url_rule('/dashboard', 'dashboard', 
