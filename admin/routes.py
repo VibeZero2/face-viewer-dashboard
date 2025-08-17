@@ -81,6 +81,36 @@ def logout():
     flash('You have been logged out', 'info')
     return redirect(url_for('admin.login'))
 
+@admin_bp.route('/register', methods=['GET', 'POST'])
+def register():
+    """User registration route"""
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        
+        # Validate input
+        if not username or not password:
+            flash('Username and password are required', 'danger')
+            return render_template('admin/register.html')
+            
+        if password != confirm_password:
+            flash('Passwords do not match', 'danger')
+            return render_template('admin/register.html')
+        
+        # Create user
+        if admin_auth.create_user(username, password, role='admin'):
+            audit_log.log_action(
+                action_type='registration',
+                description=f"User {username} registered successfully"
+            )
+            flash('Registration successful! You can now log in.', 'success')
+            return redirect(url_for('admin.login'))
+        else:
+            flash('Username already exists', 'danger')
+    
+    return render_template('admin/register.html')
+
 # Dashboard routes
 @admin_bp.route('/')
 def dashboard():

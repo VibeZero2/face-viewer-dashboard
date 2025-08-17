@@ -19,7 +19,7 @@
                         {% endif %}
                     {% endwith %}
                     
-                    <form method="POST" action="{{ url_for('admin_login') }}">
+                    <form method="POST" action="{{ url_for('admin.login') }}">
                         <div class="mb-3">
                             <label for="username" class="form-label">Username</label>
                             <input type="text" class="form-control" id="username" name="username" required>
@@ -34,6 +34,7 @@
                     </form>
                 </div>
                 <div class="card-footer text-muted text-center">
+                    <p>Don't have an account? <a href="{{ url_for('admin.register') }}">Register here</a></p>
                     <small>Face Viewer Dashboard - Secure Admin Access</small>
                 </div>
             </div>
