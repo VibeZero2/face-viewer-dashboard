@@ -40,7 +40,9 @@ abandoned_sessions.log
 *.csv
 *.zip
 *.xlsx
-data/
+data/*.csv
+data/*.zip
+data/*.xlsx
 
 # R
 .Rhistory

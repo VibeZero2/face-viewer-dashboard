@@ -1,0 +1,12 @@
+{
+  "admin": {
+    "password": "admin",
+    "role": "admin",
+    "email": "admin@example.com"
+  },
+  "cvetrano": {
+    "password": "Ilovemydogs311",
+    "email": "vibezero@gmail.com",
+    "role": "user"
+  }
+}

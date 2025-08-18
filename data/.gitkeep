@@ -1,0 +1,8 @@
+# This file ensures the data directory structure is preserved in Git
+# while keeping actual participant data files private for security reasons.
+#
+# Directory structure:
+# data/
+# ├── responses/          # Production participant data (ignored by .gitignore)
+# ├── test_responses/     # Test data files (ignored by .gitignore)
+# └── users.json          # User authentication data
