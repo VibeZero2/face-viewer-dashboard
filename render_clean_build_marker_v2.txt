@@ -1,4 +1,0 @@
-This file was created on purpose to force Render to perform a completely clean build.
-Timestamp: 2023-11-08
-Version: 2.0
-DO NOT DELETE THIS FILE - it helps ensure clean builds on Render.
