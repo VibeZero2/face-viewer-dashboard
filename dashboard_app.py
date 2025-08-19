@@ -284,12 +284,24 @@ def dashboard():
                     file_name in ['test789.csv', 'test123.csv', 'test456.csv']
                 )
                 
-                data_files.append({
-                    'name': file_path.name,
-                    'size': f"{stat.st_size / 1024:.1f} KB",
-                    'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
-                    'type': 'Test' if is_test_file else 'Production'
-                })
+                # Debug: Print file classification
+                print(f"DEBUG: {file_name} -> {'Test' if is_test_file else 'Production'}")
+                
+                # Filter files based on current mode
+                if data_cleaner.test_mode:
+                    # Test mode: show all files
+                    show_file = True
+                else:
+                    # Production mode: only show real participant files
+                    show_file = not is_test_file
+                
+                if show_file:
+                    data_files.append({
+                        'name': file_path.name,
+                        'size': f"{stat.st_size / 1024:.1f} KB",
+                        'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                        'type': 'Test' if is_test_file else 'Production'
+                    })
         
         return render_template('dashboard.html',
                          exclusion_summary=exclusion_summary,
