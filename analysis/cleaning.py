@@ -221,11 +221,13 @@ class DataCleaner:
             # Old format uses numbers like 1, 2, 3
             # Convert numeric face IDs to study program format
             if df['face_id'].dtype in ['int64', 'float64']:
+                # Convert entire column to string first to avoid dtype warnings
+                df['face_id'] = df['face_id'].astype(str)
                 # Handle NaN values by filling them first
                 df['face_id'] = df['face_id'].fillna('unknown')
                 # Convert only non-NaN values
                 numeric_mask = df['face_id'].notna() & (df['face_id'] != 'unknown')
-                df.loc[numeric_mask, 'face_id'] = 'face_' + df.loc[numeric_mask, 'face_id'].astype(int).astype(str)
+                df.loc[numeric_mask, 'face_id'] = 'face_' + df.loc[numeric_mask, 'face_id']
                 logger.info("Converted numeric face_id to study program format (face_1, face_2, etc.)")
             elif df['face_id'].dtype == 'object':
                 # Check if we have mixed formats
