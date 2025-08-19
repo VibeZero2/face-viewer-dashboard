@@ -413,31 +413,43 @@
                                             <table class="table table-sm table-hover">
                                                 <thead class="table-light">
                                                     <tr>
-                                                        <th>Filename</th>
-                                                        <th>Size</th>
+                                                        <th>Participant/Filename</th>
+                                                        <th>Size/Progress</th>
                                                         <th>Last Modified</th>
+                                                        <th>Status</th>
                                                         <th>Actions</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {% for file in data_files %}
-                                                    <tr class="{% if 'participant_' in file.name %}file-production{% elif 'test_' in file.name or 'PROLIFIC_TEST' in file.name %}file-test{% endif %}">
+                                                    <tr class="{% if file.type == 'Production' %}file-production{% else %}file-test{% endif %}">
                                                         <td>
                                                             {{ file.name }}
-                                                            {% if 'participant_' in file.name %}
-                                                                <span class="badge bg-success ms-1">Production</span>
-                                                            {% elif 'test_' in file.name or 'PROLIFIC_TEST' in file.name %}
-                                                                <span class="badge bg-warning ms-1">Test</span>
-                                                            {% endif %}
+                                                            <span class="badge bg-{% if file.type == 'Production' %}success{% else %}warning{% endif %} ms-1">{{ file.type }}</span>
                                                         </td>
                                                         <td>{{ file.size }}</td>
                                                         <td>{{ file.modified }}</td>
                                                         <td>
-                                                            <form action="/admin/delete/{{ file.name }}" method="post" style="display: inline;">
-                                                                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this file?')">
-                                                                    <i class="fas fa-trash"></i>
-                                                                </button>
-                                                            </form>
+                                                            {% if file.status == 'Complete' %}
+                                                                <span class="badge bg-success">
+                                                                    <i class="fas fa-check-circle me-1"></i>Complete
+                                                                </span>
+                                                            {% else %}
+                                                                <span class="badge bg-warning text-dark">
+                                                                    <i class="fas fa-clock me-1"></i>{{ file.status }}
+                                                                </span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td>
+                                                            {% if file.status == 'Complete' %}
+                                                                <form action="/admin/delete/{{ file.name }}" method="post" style="display: inline;">
+                                                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this file?')">
+                                                                        <i class="fas fa-trash"></i>
+                                                                    </button>
+                                                                </form>
+                                                            {% else %}
+                                                                <small class="text-muted">In Progress</small>
+                                                            {% endif %}
                                                         </td>
                                                     </tr>
                                                     {% endfor %}

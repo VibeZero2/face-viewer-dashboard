@@ -267,8 +267,11 @@ def dashboard():
         # Get available filters
         available_filters = data_filter.get_available_filters()
         
-        # Get list of data files with proper tagging
+        # Get list of data files with proper tagging and session data
         data_files = []
+        session_data = []
+        
+        # Load completed data files
         data_dir = Path("data/responses")
         if data_dir.exists():
             for file_path in data_dir.glob("*.csv"):
@@ -300,8 +303,54 @@ def dashboard():
                         'name': file_path.name,
                         'size': f"{stat.st_size / 1024:.1f} KB",
                         'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
-                        'type': 'Test' if is_test_file else 'Production'
+                        'type': 'Test' if is_test_file else 'Production',
+                        'status': 'Complete'
                     })
+        
+        # Load session data (incomplete participants)
+        sessions_dir = Path("../facial-trust-study/data/sessions")
+        if sessions_dir.exists():
+            import json
+            for session_file in sessions_dir.glob("*_session.json"):
+                try:
+                    with open(session_file, 'r') as f:
+                        session_info = json.load(f)
+                    
+                    participant_id = session_info.get('participant_id', 'Unknown')
+                    session_complete = session_info.get('session_complete', False)
+                    
+                    # Only show incomplete sessions and apply mode filtering
+                    is_test_session = (
+                        'test' in participant_id.lower() or 
+                        participant_id.isdigit()  # Numeric IDs like "200" are test
+                    )
+                    
+                    # Filter based on mode
+                    if data_cleaner.test_mode:
+                        show_session = True
+                    else:
+                        show_session = not is_test_session
+                    
+                    if show_session and not session_complete:
+                        total_faces = len(session_info.get('face_order', []))
+                        current_index = session_info.get('index', 0)
+                        completed_faces = current_index // 2  # Each face has 2 stages
+                        progress_percent = (completed_faces / total_faces * 100) if total_faces > 0 else 0
+                        
+                        session_data.append({
+                            'name': f"{participant_id} (Session)",
+                            'size': f"{completed_faces}/{total_faces} faces",
+                            'modified': session_info.get('timestamp', 'Unknown'),
+                            'type': 'Test' if is_test_session else 'Production',
+                            'status': f'Incomplete ({progress_percent:.1f}%)',
+                            'participant_id': participant_id
+                        })
+                        
+                except Exception as e:
+                    print(f"DEBUG: Error reading session file {session_file}: {e}")
+        
+        # Combine data files and session data
+        all_files = data_files + session_data
         
         return render_template('dashboard.html',
                          exclusion_summary=exclusion_summary,
@@ -309,7 +358,7 @@ def dashboard():
                          dashboard_stats=dashboard_stats,
                          data_summary=data_summary,
                          available_filters=available_filters,
-                         data_files=data_files)
+                         data_files=all_files)
     except Exception as e:
         flash(f'Error loading dashboard: {str(e)}', 'error')
         return render_template('error.html', message=str(e))
