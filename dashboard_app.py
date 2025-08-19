@@ -240,11 +240,11 @@ def dashboard():
         
         # Basic stats like in the screenshots
         dashboard_stats = {
-            'total_participants': exclusion_summary['session_level']['total_sessions'],
+            'total_participants': len(included_data['pid'].unique()) if len(included_data) > 0 else 0,
             'total_responses': exclusion_summary['total_raw'],
             'avg_trust_rating': included_data['trust_rating'].mean() if len(included_data) > 0 else 0,
             'std_trust_rating': included_data['trust_rating'].std() if len(included_data) > 0 else 0,
-            'included_participants': exclusion_summary['session_level']['total_sessions'] - exclusion_summary['session_level']['excluded_sessions'],
+            'included_participants': len(included_data['pid'].unique()) if len(included_data) > 0 else 0,
             'cleaned_trials': exclusion_summary['total_cleaned']
         }
         
