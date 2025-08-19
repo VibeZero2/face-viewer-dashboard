@@ -234,33 +234,56 @@ def dashboard():
         descriptive_stats = statistical_analyzer.get_descriptive_stats()
         data_summary = data_cleaner.get_data_summary()
         
+        # Ensure data_summary is consistent with current mode
+        if data_cleaner.test_mode:
+            data_summary['mode'] = 'TEST'
+        else:
+            data_summary['mode'] = 'PRODUCTION'
+        
         # Calculate additional stats for the dashboard
         cleaned_data = data_cleaner.get_cleaned_data()
         included_data = cleaned_data[cleaned_data['include_in_primary']]
         
+        # Get data summary for consistent counts
+        data_summary = data_cleaner.get_data_summary()
+        
         # Basic stats like in the screenshots
         dashboard_stats = {
             'total_participants': len(included_data['pid'].unique()) if len(included_data) > 0 else 0,
-            'total_responses': exclusion_summary['total_raw'],
+            'total_responses': len(included_data) if len(included_data) > 0 else 0,  # Use included responses, not raw
             'avg_trust_rating': included_data['trust_rating'].mean() if len(included_data) > 0 else 0,
             'std_trust_rating': included_data['trust_rating'].std() if len(included_data) > 0 else 0,
             'included_participants': len(included_data['pid'].unique()) if len(included_data) > 0 else 0,
-            'cleaned_trials': exclusion_summary['total_cleaned']
+            'cleaned_trials': len(included_data) if len(included_data) > 0 else 0,
+            'raw_responses': exclusion_summary['total_raw'],
+            'excluded_responses': exclusion_summary['total_raw'] - len(included_data) if len(included_data) > 0 else exclusion_summary['total_raw']
         }
         
         # Get available filters
         available_filters = data_filter.get_available_filters()
         
-        # Get list of data files
+        # Get list of data files with proper tagging
         data_files = []
         data_dir = Path("data/responses")
         if data_dir.exists():
             for file_path in data_dir.glob("*.csv"):
                 stat = file_path.stat()
+                
+                # Determine if file is test or production
+                file_name = file_path.name
+                is_test_file = (
+                    file_name.startswith('test_') or 
+                    file_name.startswith('test_participant') or
+                    'test_statistical_validation' in file_name or
+                    file_name.startswith('PROLIFIC_TEST_') or
+                    file_name in ['test789.csv', 'test123.csv', 'test456.csv']
+                )
+                
                 data_files.append({
                     'name': file_path.name,
                     'size': f"{stat.st_size / 1024:.1f} KB",
-                    'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+                    'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                    'type': 'Test' if is_test_file else 'Production'
                 })
         
         return render_template('dashboard.html',

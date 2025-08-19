@@ -51,7 +51,9 @@ class DataCleaner:
                     file_name.startswith('test_participant') or
                     'test_statistical_validation' in file_name or
                     file_name.startswith('PROLIFIC_TEST_') or
-                    file_name == 'test789.csv'):
+                    file_name == 'test789.csv' or
+                    file_name == 'test123.csv' or
+                    file_name == 'test456.csv'):
                     excluded_files.append(file_name)
                     continue
                 
@@ -386,7 +388,9 @@ class DataCleaner:
             completion_rate = actual_trials / expected_trials
             
             # For test data, be more lenient (50% instead of 80%)
-            min_completion_rate = 0.5 if actual_trials < 48 else 0.8  # 48 = 80% of 60
+            # But only if it's actually test data (not real participant data)
+            is_test_data = any(test_pattern in str(participant) for test_pattern in ['test_', 'test123', 'test456', 'test789'])
+            min_completion_rate = 0.5 if (actual_trials < 48 and is_test_data) else 0.8  # 48 = 80% of 60
             
             if completion_rate < min_completion_rate:
                 df.loc[df['pid'] == participant, 'include_in_primary'] = False
