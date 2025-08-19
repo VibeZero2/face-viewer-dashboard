@@ -317,7 +317,11 @@ def dashboard():
         sessions_dir = Path("../facial-trust-study/data/sessions")
         if sessions_dir.exists():
             import json
-            for session_file in sessions_dir.glob("*_session.json"):
+            session_data = []
+            print(f"DEBUG: Checking sessions directory: {sessions_dir}")
+            session_files = list(sessions_dir.glob("*_session.json"))
+            print(f"DEBUG: Found {len(session_files)} session files: {[f.name for f in session_files]}")
+            for session_file in session_files:
                 try:
                     with open(session_file, 'r') as f:
                         session_info = json.load(f)
@@ -325,11 +329,15 @@ def dashboard():
                     participant_id = session_info.get('participant_id', 'Unknown')
                     session_complete = session_info.get('session_complete', False)
                     
+                    print(f"DEBUG: Processing session {participant_id}, complete: {session_complete}")
+                    
                     # Only show incomplete sessions and apply mode filtering
                     is_test_session = (
                         'test' in participant_id.lower() or 
                         participant_id.isdigit()  # Numeric IDs like "200" are test
                     )
+                    
+                    print(f"DEBUG: Session {participant_id} - is_test: {is_test_session}, test_mode: {data_cleaner.test_mode}, show_incomplete: {show_incomplete_in_production}")
                     
                     # Filter based on mode and incomplete toggle
                     if data_cleaner.test_mode:
@@ -337,6 +345,8 @@ def dashboard():
                     else:
                         # Production mode: show ALL sessions (test and real) if incomplete toggle is enabled
                         show_session = show_incomplete_in_production  # Show any sessions if toggle enabled
+                    
+                    print(f"DEBUG: Session {participant_id} - show_session: {show_session}, not complete: {not session_complete}")
                     
                     if show_session and not session_complete:
                         total_faces = len(session_info.get('face_order', []))
@@ -352,12 +362,16 @@ def dashboard():
                             'status': f'Incomplete ({progress_percent:.1f}%)',
                             'participant_id': participant_id
                         })
+                        print(f"DEBUG: Added session {participant_id} to session_data")
                         
                 except Exception as e:
                     print(f"DEBUG: Error reading session file {session_file}: {e}")
         
         # Combine data files and session data
         all_files = data_files + session_data
+        print(f"DEBUG: Total files to display: {len(all_files)} (CSV: {len(data_files)}, Sessions: {len(session_data)})")
+        if session_data:
+            print(f"DEBUG: Session data: {[s['name'] for s in session_data]}")
         
         return render_template('dashboard.html',
                          exclusion_summary=exclusion_summary,
