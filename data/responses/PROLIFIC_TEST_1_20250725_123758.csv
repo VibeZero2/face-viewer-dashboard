@@ -1,0 +1,17 @@
+pid,timestamp,face_id,version,order_presented,trust_rating,masc_choice,fem_choice,trust_q1,trust_q2,trust_q3,pers_q1,pers_q2,pers_q3,pers_q4,pers_q5,prolific_pid
+test123,2025-07-25T12:37:58.830822,face_1,left,0,5,,,,,,,,,,,PROLIFIC_TEST_1
+test123,2025-07-25T12:37:58.830822,face_1,right,1,6,,,,,,,,,,,PROLIFIC_TEST_1
+test123,2025-07-25T12:37:58.830822,face_1,full,2,1,neutral,neutral,,,,,,,,,PROLIFIC_TEST_1
+test123,2025-07-25T12:37:58.830822,face_2,left,2,6,,,,,,,,,,,PROLIFIC_TEST_1
+test123,2025-07-25T12:37:58.830822,face_2,right,3,7,,,,,,,,,,,PROLIFIC_TEST_1
+test123,2025-07-25T12:37:58.830822,face_2,full,4,3,masc,fem,,,,,,,,,PROLIFIC_TEST_1
+test123,2025-07-25T12:37:58.830822,face_3,left,4,5,,,,,,,,,,,PROLIFIC_TEST_1
+test123,2025-07-25T12:37:58.830822,face_3,right,5,5,,,,,,,,,,,PROLIFIC_TEST_1
+test123,2025-07-25T12:37:58.830822,face_3,full,6,5,fem,fem,,,,,,,,,PROLIFIC_TEST_1
+test123,2025-07-25T12:37:58.830822,face_4,left,6,6,,,,,,,,,,,PROLIFIC_TEST_1
+test123,2025-07-25T12:37:58.830822,face_4,right,7,6,,,,,,,,,,,PROLIFIC_TEST_1
+test123,2025-07-25T12:37:58.830822,face_4,full,8,2,fem,fem,,,,,,,,,PROLIFIC_TEST_1
+test123,2025-07-25T12:37:58.830822,face_5,left,8,1,,,,,,,,,,,PROLIFIC_TEST_1
+test123,2025-07-25T12:37:58.830822,face_5,right,9,2,,,,,,,,,,,PROLIFIC_TEST_1
+test123,2025-07-25T12:37:58.830822,face_5,full,10,7,masc,neutral,,,,,,,,,PROLIFIC_TEST_1
+test123,2025-07-25T12:37:58.830822,survey,survey,15,,,,3,5,2,3,1,2,3,1,PROLIFIC_TEST_1

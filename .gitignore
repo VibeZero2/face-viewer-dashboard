@@ -37,12 +37,13 @@ logs/
 abandoned_sessions.log
 
 # Data files
-*.csv
 *.zip
 *.xlsx
-data/*.csv
 data/*.zip
 data/*.xlsx
+
+# Allow specific study data files
+!data/responses/*.csv
 
 # R
 .Rhistory

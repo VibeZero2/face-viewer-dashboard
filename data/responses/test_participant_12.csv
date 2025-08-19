@@ -1,0 +1,11 @@
+Participant ID,Face,Version,Trust,Emotion,Masculinity,Femininity,Timestamp
+TEST012,face_01.jpg,Right Half,1.8,4.1,1.7,5.0,2025-08-06 10:45:49
+TEST012,face_02.jpg,Right Half,1.1,6.5,2.9,1.0,2025-08-06 10:47:49
+TEST012,face_03.jpg,Full Face,6.5,3.8,4.2,4.9,2025-08-06 10:49:49
+TEST012,face_04.jpg,Full Face,6.0,5.2,3.7,4.8,2025-08-06 10:51:49
+TEST012,face_05.jpg,Right Half,5.9,3.3,4.5,1.8,2025-08-06 10:53:49
+TEST012,face_06.jpg,Left Half,2.3,4.1,1.1,2.0,2025-08-06 10:55:49
+TEST012,face_07.jpg,Right Half,1.0,3.1,1.5,3.4,2025-08-06 10:57:49
+TEST012,face_08.jpg,Right Half,1.7,3.9,6.9,2.5,2025-08-06 10:59:49
+TEST012,face_09.jpg,Full Face,4.8,1.2,1.4,3.3,2025-08-06 11:01:49
+TEST012,face_10.jpg,Left Half,2.8,4.0,2.2,6.2,2025-08-06 11:03:49
