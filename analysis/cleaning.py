@@ -389,7 +389,7 @@ class DataCleaner:
             
             # For test data, be more lenient (50% instead of 80%)
             # But only if it's actually test data (not real participant data)
-            is_test_data = any(test_pattern in str(participant) for test_pattern in ['test_', 'test123', 'test456', 'test789'])
+            is_test_data = any(test_pattern in str(participant) for test_pattern in ['test_', 'test123', 'test456', 'test789', 'test_p1', 'test_p2'])
             
             # Real participant files (participant_P*.csv) should not be excluded for completion rate
             is_real_participant = str(participant).startswith('P') and len(str(participant)) >= 2

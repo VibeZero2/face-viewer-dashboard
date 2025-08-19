@@ -247,13 +247,18 @@ def dashboard():
         # Get data summary for consistent counts
         data_summary = data_cleaner.get_data_summary()
         
+        # Debug: Check what participants are in included_data
+        included_participants = included_data['pid'].unique() if len(included_data) > 0 else []
+        print(f"DEBUG: Included participants: {included_participants}")
+        print(f"DEBUG: Total included data rows: {len(included_data)}")
+        
         # Basic stats like in the screenshots
         dashboard_stats = {
-            'total_participants': len(included_data['pid'].unique()) if len(included_data) > 0 else 0,
+            'total_participants': len(included_participants),
             'total_responses': len(included_data) if len(included_data) > 0 else 0,  # Use included responses, not raw
             'avg_trust_rating': included_data['trust_rating'].mean() if len(included_data) > 0 else 0,
             'std_trust_rating': included_data['trust_rating'].std() if len(included_data) > 0 else 0,
-            'included_participants': len(included_data['pid'].unique()) if len(included_data) > 0 else 0,
+            'included_participants': len(included_participants),
             'cleaned_trials': len(included_data) if len(included_data) > 0 else 0,
             'raw_responses': exclusion_summary['total_raw'],
             'excluded_responses': exclusion_summary['total_raw'] - len(included_data) if len(included_data) > 0 else exclusion_summary['total_raw']
