@@ -432,7 +432,19 @@ def exclusions():
         session_details = []
         for pid in cleaned_data['pid'].unique():
             session_data = cleaned_data[cleaned_data['pid'] == pid]
-            included = session_data['include_in_primary'].iloc[0]
+            
+            # Handle empty session data
+            if len(session_data) == 0:
+                session_details.append({
+                    'pid': pid,
+                    'total_trials': 0,
+                    'included': False,
+                    'exclusion_reasons': ['no_data']
+                })
+                continue
+            
+            # Get inclusion status safely
+            included = session_data['include_in_primary'].iloc[0] if len(session_data) > 0 else False
             
             # Determine exclusion reasons
             exclusion_reasons = []
@@ -441,10 +453,10 @@ def exclusions():
                 if len(session_data) < 48:  # 80% of 60 trials
                     exclusion_reasons.append('low_completion')
                 # Check for attention failures (placeholder)
-                if session_data['excl_failed_attention'].any():
+                if 'excl_failed_attention' in session_data.columns and session_data['excl_failed_attention'].any():
                     exclusion_reasons.append('attention_failed')
                 # Check for device violations (placeholder)
-                if session_data['excl_device_violation'].any():
+                if 'excl_device_violation' in session_data.columns and session_data['excl_device_violation'].any():
                     exclusion_reasons.append('device_violation')
             
             session_details.append({
@@ -460,8 +472,16 @@ def exclusions():
         if len(excluded_trials) > 0:
             # Show first 50 excluded trials
             sample_trials = excluded_trials.head(50)
-            trial_details = sample_trials[['pid', 'face_id', 'version', 'trust_rating', 'reaction_time', 
-                                         'excl_fast_rt', 'excl_slow_rt', 'include_in_primary']].to_dict('records')
+            
+            # Define columns to include, checking if they exist
+            columns_to_include = ['pid', 'include_in_primary']
+            optional_columns = ['face_id', 'version', 'trust_rating', 'reaction_time', 'excl_fast_rt', 'excl_slow_rt']
+            
+            for col in optional_columns:
+                if col in sample_trials.columns:
+                    columns_to_include.append(col)
+            
+            trial_details = sample_trials[columns_to_include].to_dict('records')
         
         return render_template('exclusions.html', 
                              exclusion_summary=exclusion_summary,
