@@ -1,0 +1,82 @@
+{
+    "participant_id": "P008",
+    "session_complete": false,
+    "timestamp": "2025-08-19T19:50:00.000000",
+    "index": 6,
+    "face_order": [
+        "1 (137)",
+        "1 (212)", 
+        "1 (205)",
+        "Face ID (19)",
+        "Face ID (10)",
+        "Face ID (104)",
+        "1 (174)",
+        "Face ID (16)",
+        "1 (128)",
+        "Face ID (25)",
+        "1 (163)",
+        "1 (168)",
+        "CFD-AM-230-150-N",
+        "1 (209)",
+        "Face ID (11)",
+        "1 (135)",
+        "1 (143)",
+        "Face ID (97)",
+        "CFD-AF-250-200-N",
+        "CFD-AM-235-241-N",
+        "Face ID (72)",
+        "Face ID (76)",
+        "1 (141)",
+        "1 (186)",
+        "1 (167)",
+        "Face ID (102)",
+        "Face ID (14)",
+        "1 (202)",
+        "1 (171)",
+        "Face ID (99)",
+        "Face ID (74)",
+        "Face ID (112)",
+        "CFD-AM-231-136-N",
+        "Face ID (34)",
+        "Face ID (21)"
+    ],
+    "responses": [
+        {
+            "face_id": "1 (137)",
+            "version": "left",
+            "trust_rating": 6,
+            "timestamp": "2025-08-19T19:45:15.000000"
+        },
+        {
+            "face_id": "1 (137)", 
+            "version": "right",
+            "trust_rating": 8,
+            "timestamp": "2025-08-19T19:45:22.000000"
+        },
+        {
+            "face_id": "1 (137)",
+            "version": "full", 
+            "trust_rating": 7,
+            "timestamp": "2025-08-19T19:45:28.000000"
+        },
+        {
+            "face_id": "1 (212)",
+            "version": "left",
+            "trust_rating": 5,
+            "timestamp": "2025-08-19T19:46:05.000000"
+        },
+        {
+            "face_id": "1 (212)",
+            "version": "right",
+            "trust_rating": 6,
+            "timestamp": "2025-08-19T19:46:12.000000"
+        },
+        {
+            "face_id": "1 (212)",
+            "version": "full",
+            "trust_rating": 7,
+            "timestamp": "2025-08-19T19:46:18.000000"
+        }
+    ],
+    "prolific_pid": ""
+}
