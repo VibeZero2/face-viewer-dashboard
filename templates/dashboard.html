@@ -194,10 +194,15 @@
                                         </strong>
                                         <br>
                                         <small class="text-muted">
-                                            Currently analyzing: {{ data_summary.real_participants }} real participants | {{ dashboard_stats.cleaned_trials if dashboard_stats else data_summary.total_rows }} trials
+                                            Data files: {{ data_summary.real_participants }} files loaded | {{ dashboard_stats.cleaned_trials if dashboard_stats else data_summary.total_rows }} trials
                                             {% if data_summary.test_files > 0 %}
                                                 | {{ data_summary.test_files }} test files excluded
                                             {% endif %}
+                                            <br>
+                                            <span class="text-info">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                Participants page shows only those meeting inclusion criteria
+                                            </span>
                                         </small>
                                     </div>
                                     {% if data_summary.mode == 'PRODUCTION' %}
