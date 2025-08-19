@@ -23,7 +23,7 @@ class DataCleaner:
     def load_data(self) -> pd.DataFrame:
         """
         Load and merge CSV files from the responses directory.
-        By default, only loads real study data files (participant_*.csv).
+        By default, only loads real study data files (participant_*.csv and study program files).
         Set test_mode=True to include test files.
         """
         csv_files = list(self.data_dir.glob("*.csv"))
@@ -36,15 +36,33 @@ class DataCleaner:
             filtered_files = csv_files
             logger.info("TEST MODE: Loading all CSV files including test data")
         else:
-            # Production mode: only real study data
-            filtered_files = [f for f in csv_files if f.name.startswith('participant_')]
-            excluded_files = [f.name for f in csv_files if not f.name.startswith('participant_')]
+            # Production mode: include real study data and study program files
+            # Study program files: timestamped files (e.g., test789_20250725_123758.csv)
+            # Real participant files: participant_*.csv
+            # Prolific files: PROLIFIC_*.csv
+            filtered_files = []
+            excluded_files = []
+            
+            for file_path in csv_files:
+                file_name = file_path.name
+                
+                # Include real participant files
+                if file_name.startswith('participant_'):
+                    filtered_files.append(file_path)
+                # Include study program files (timestamped or with Prolific IDs)
+                elif any(pattern in file_name for pattern in ['_2025', 'PROLIFIC_', 'test789']):
+                    filtered_files.append(file_path)
+                # Include files that look like real study data (not test files)
+                elif not file_name.startswith('test_') and not file_name.startswith('test_participant'):
+                    filtered_files.append(file_path)
+                else:
+                    excluded_files.append(file_name)
             
             if excluded_files:
                 logger.info(f"PRODUCTION MODE: Excluded test files: {excluded_files}")
             
             if not filtered_files:
-                raise FileNotFoundError(f"No real study data files (participant_*.csv) found in {self.data_dir}")
+                raise FileNotFoundError(f"No real study data files found in {self.data_dir}")
         
         all_data = []
         real_participants = 0
@@ -64,8 +82,9 @@ class DataCleaner:
                 
                 all_data.append(df)
                 
-                # Count real participants (files starting with 'participant_')
-                if file_path.name.startswith('participant_'):
+                # Count real participants (files that look like real data)
+                if (file_path.name.startswith('participant_') or 
+                    any(pattern in file_path.name for pattern in ['_2025', 'PROLIFIC_', 'test789'])):
                     real_participants += 1
                 
                 total_rows += len(df)
@@ -96,8 +115,16 @@ class DataCleaner:
         if self.raw_data is None:
             return {"status": "No data loaded"}
         
-        real_files = [f for f in self.raw_data['source_file'].unique() if f.startswith('participant_')]
-        test_files = [f for f in self.raw_data['source_file'].unique() if not f.startswith('participant_')]
+        # Count real participants (including study program files)
+        real_files = []
+        test_files = []
+        
+        for file_name in self.raw_data['source_file'].unique():
+            if (file_name.startswith('participant_') or 
+                any(pattern in file_name for pattern in ['_2025', 'PROLIFIC_', 'test789'])):
+                real_files.append(file_name)
+            else:
+                test_files.append(file_name)
         
         return {
             "mode": "TEST" if self.test_mode else "PRODUCTION",
@@ -176,6 +203,25 @@ class DataCleaner:
             # Drop the participant_id column since we have pid
             df = df.drop(columns=['participant_id'])
             logger.info("Dropped participant_id column after ensuring pid has data")
+        
+        # Handle face_id conversion for study program format
+        if 'face_id' in df.columns:
+            # Study program uses 'face_1', 'face_2', etc.
+            # Old format uses numbers like 1, 2, 3
+            # Convert numeric face IDs to study program format
+            if df['face_id'].dtype in ['int64', 'float64']:
+                # Handle NaN values by filling them first
+                df['face_id'] = df['face_id'].fillna('unknown')
+                # Convert only non-NaN values
+                numeric_mask = df['face_id'].notna() & (df['face_id'] != 'unknown')
+                df.loc[numeric_mask, 'face_id'] = 'face_' + df.loc[numeric_mask, 'face_id'].astype(int).astype(str)
+                logger.info("Converted numeric face_id to study program format (face_1, face_2, etc.)")
+            elif df['face_id'].dtype == 'object':
+                # Check if we have mixed formats
+                numeric_faces = df['face_id'].str.match(r'^\d+$', na=False)
+                if numeric_faces.any():
+                    df.loc[numeric_faces, 'face_id'] = 'face_' + df.loc[numeric_faces, 'face_id'].astype(str)
+                    logger.info("Converted numeric face_id values to study program format")
         
         # Ensure face_id exists and has data (study program uses 'face_id')
         if 'facenumber' in df.columns and 'face_id' in df.columns:
