@@ -1,11 +1,106 @@
-Participant ID,Face,Version,Trust,Emotion,Masculinity,Femininity,Timestamp
-TEST017,face_01.jpg,Left Half,4.1,4.2,6.1,2.9,2025-08-06 10:45:49
-TEST017,face_02.jpg,Left Half,3.2,4.3,1.5,5.3,2025-08-06 10:47:49
-TEST017,face_03.jpg,Right Half,5.5,2.1,2.7,1.2,2025-08-06 10:49:49
-TEST017,face_04.jpg,Full Face,5.0,5.9,5.6,1.9,2025-08-06 10:51:49
-TEST017,face_05.jpg,Full Face,4.4,6.4,5.2,4.0,2025-08-06 10:53:49
-TEST017,face_06.jpg,Right Half,4.1,1.6,1.1,5.8,2025-08-06 10:55:49
-TEST017,face_07.jpg,Right Half,1.3,3.4,5.5,4.1,2025-08-06 10:57:49
-TEST017,face_08.jpg,Right Half,4.6,4.4,6.5,3.3,2025-08-06 10:59:49
-TEST017,face_09.jpg,Right Half,3.2,1.6,6.8,2.0,2025-08-06 11:01:49
-TEST017,face_10.jpg,Right Half,3.9,6.5,5.2,5.3,2025-08-06 11:03:49
+participant_id,facenumber,faceversion,trust,masculinity,femininity
+test_participant_17,1,Left Half,2,2,1
+test_participant_17,1,Right Half,3,7,3
+test_participant_17,1,Full Face,1,3,5
+test_participant_17,2,Left Half,6,6,7
+test_participant_17,2,Right Half,1,6,7
+test_participant_17,2,Full Face,3,7,2
+test_participant_17,3,Left Half,5,6,4
+test_participant_17,3,Right Half,1,5,1
+test_participant_17,3,Full Face,7,7,1
+test_participant_17,4,Left Half,6,3,4
+test_participant_17,4,Right Half,6,5,4
+test_participant_17,4,Full Face,7,5,5
+test_participant_17,5,Left Half,2,1,7
+test_participant_17,5,Right Half,1,1,4
+test_participant_17,5,Full Face,3,6,5
+test_participant_17,6,Left Half,6,3,6
+test_participant_17,6,Right Half,5,4,4
+test_participant_17,6,Full Face,6,5,3
+test_participant_17,7,Left Half,5,7,6
+test_participant_17,7,Right Half,5,2,2
+test_participant_17,7,Full Face,7,4,5
+test_participant_17,8,Left Half,4,2,7
+test_participant_17,8,Right Half,7,6,5
+test_participant_17,8,Full Face,5,6,2
+test_participant_17,9,Left Half,4,3,4
+test_participant_17,9,Right Half,7,2,5
+test_participant_17,9,Full Face,6,7,4
+test_participant_17,10,Left Half,7,3,6
+test_participant_17,10,Right Half,4,7,1
+test_participant_17,10,Full Face,4,4,7
+test_participant_17,11,Left Half,6,7,1
+test_participant_17,11,Right Half,4,1,6
+test_participant_17,11,Full Face,6,7,2
+test_participant_17,12,Left Half,2,4,3
+test_participant_17,12,Right Half,6,5,7
+test_participant_17,12,Full Face,1,7,3
+test_participant_17,13,Left Half,7,2,5
+test_participant_17,13,Right Half,7,3,7
+test_participant_17,13,Full Face,2,7,4
+test_participant_17,14,Left Half,5,5,4
+test_participant_17,14,Right Half,7,2,4
+test_participant_17,14,Full Face,7,4,4
+test_participant_17,15,Left Half,1,7,7
+test_participant_17,15,Right Half,5,6,5
+test_participant_17,15,Full Face,5,3,5
+test_participant_17,16,Left Half,4,6,2
+test_participant_17,16,Right Half,6,3,5
+test_participant_17,16,Full Face,3,4,5
+test_participant_17,17,Left Half,5,6,1
+test_participant_17,17,Right Half,1,1,1
+test_participant_17,17,Full Face,6,4,5
+test_participant_17,18,Left Half,7,5,3
+test_participant_17,18,Right Half,5,3,4
+test_participant_17,18,Full Face,5,2,4
+test_participant_17,19,Left Half,4,6,7
+test_participant_17,19,Right Half,7,1,1
+test_participant_17,19,Full Face,3,1,5
+test_participant_17,20,Left Half,7,5,6
+test_participant_17,20,Right Half,7,4,5
+test_participant_17,20,Full Face,3,5,4
+test_participant_17,21,Left Half,1,2,5
+test_participant_17,21,Right Half,7,3,5
+test_participant_17,21,Full Face,4,4,6
+test_participant_17,22,Left Half,5,4,6
+test_participant_17,22,Right Half,5,6,7
+test_participant_17,22,Full Face,6,4,4
+test_participant_17,23,Left Half,2,2,2
+test_participant_17,23,Right Half,4,7,6
+test_participant_17,23,Full Face,1,2,1
+test_participant_17,24,Left Half,1,1,6
+test_participant_17,24,Right Half,2,4,3
+test_participant_17,24,Full Face,2,5,6
+test_participant_17,25,Left Half,6,5,7
+test_participant_17,25,Right Half,6,3,4
+test_participant_17,25,Full Face,6,5,3
+test_participant_17,26,Left Half,3,1,1
+test_participant_17,26,Right Half,5,4,4
+test_participant_17,26,Full Face,1,1,4
+test_participant_17,27,Left Half,2,1,4
+test_participant_17,27,Right Half,1,7,1
+test_participant_17,27,Full Face,5,3,5
+test_participant_17,28,Left Half,4,3,7
+test_participant_17,28,Right Half,5,5,6
+test_participant_17,28,Full Face,1,1,2
+test_participant_17,29,Left Half,2,3,5
+test_participant_17,29,Right Half,5,5,1
+test_participant_17,29,Full Face,3,5,4
+test_participant_17,30,Left Half,5,1,7
+test_participant_17,30,Right Half,6,1,7
+test_participant_17,30,Full Face,5,6,3
+test_participant_17,31,Left Half,4,1,2
+test_participant_17,31,Right Half,3,3,1
+test_participant_17,31,Full Face,6,1,3
+test_participant_17,32,Left Half,1,5,7
+test_participant_17,32,Right Half,6,3,7
+test_participant_17,32,Full Face,4,6,3
+test_participant_17,33,Left Half,3,5,3
+test_participant_17,33,Right Half,4,7,6
+test_participant_17,33,Full Face,5,2,4
+test_participant_17,34,Left Half,6,4,6
+test_participant_17,34,Right Half,2,1,1
+test_participant_17,34,Full Face,4,3,4
+test_participant_17,35,Left Half,4,5,2
+test_participant_17,35,Right Half,3,7,3
+test_participant_17,35,Full Face,3,6,2
