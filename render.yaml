@@ -5,7 +5,7 @@ services:
     env: python
     runtime: python3.12
     buildCommand: ./build_clean.sh
-    startCommand: gunicorn wsgi:application
+    startCommand: gunicorn dashboard_app:app
     envVars:
       - key: FLASK_SECRET_KEY
         generateValue: true
@@ -27,5 +27,5 @@ services:
         value: 10000
       - key: WEB_CONCURRENCY
         value: "1"
-    healthCheckPath: /
+    healthCheckPath: /health
     autoDeploy: true
