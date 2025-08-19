@@ -160,6 +160,17 @@
                                     Switch to {{ 'TEST' if data_summary and data_summary.mode == 'PRODUCTION' else 'PRODUCTION' }} Mode
                                 </button>
                             </form>
+                            
+                            <!-- Show Incomplete Sessions Toggle (Production Mode Only) -->
+                            {% if data_summary and data_summary.mode == 'PRODUCTION' %}
+                            <form method="post" action="{{ url_for('toggle_incomplete') }}" style="display: inline;" class="ms-2">
+                                <button type="submit" class="btn btn-outline-{{ 'primary' if show_incomplete_in_production else 'secondary' }} btn-sm" 
+                                        title="{{ 'Hide' if show_incomplete_in_production else 'Show' }} incomplete sessions">
+                                    <i class="fas fa-{{ 'eye-slash' if show_incomplete_in_production else 'eye' }} me-1"></i>
+                                    {{ 'Hide' if show_incomplete_in_production else 'Show' }} Incomplete
+                                </button>
+                            </form>
+                            {% endif %}
                         </div>
                     </div>
                 </nav>

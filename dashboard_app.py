@@ -37,6 +37,9 @@ data_filter = None
 last_data_refresh = None
 data_files_hash = None
 
+# Dashboard settings
+show_incomplete_in_production = False
+
 class DataFileHandler(FileSystemEventHandler):
     """Watchdog handler for detecting new data files"""
     
@@ -325,11 +328,15 @@ def dashboard():
                         participant_id.isdigit()  # Numeric IDs like "200" are test
                     )
                     
-                    # Filter based on mode
+                    # Filter based on mode and incomplete toggle
                     if data_cleaner.test_mode:
-                        show_session = True
+                        show_session = True  # Test mode shows everything
                     else:
-                        show_session = not is_test_session
+                        # Production mode: show non-test sessions only if incomplete toggle is enabled
+                        if is_test_session:
+                            show_session = False  # Never show test sessions in production
+                        else:
+                            show_session = show_incomplete_in_production  # Show real sessions only if toggle enabled
                     
                     if show_session and not session_complete:
                         total_faces = len(session_info.get('face_order', []))
@@ -358,7 +365,8 @@ def dashboard():
                          dashboard_stats=dashboard_stats,
                          data_summary=data_summary,
                          available_filters=available_filters,
-                         data_files=all_files)
+                         data_files=all_files,
+                         show_incomplete_in_production=show_incomplete_in_production)
     except Exception as e:
         flash(f'Error loading dashboard: {str(e)}', 'error')
         return render_template('error.html', message=str(e))
@@ -824,6 +832,18 @@ def toggle_mode():
         flash(f'Switched to {mode_name} mode successfully', 'success')
     else:
         flash('Failed to switch modes', 'error')
+    
+    return redirect(url_for('dashboard'))
+
+@app.route('/toggle_incomplete', methods=['POST'])
+@login_required
+def toggle_incomplete():
+    """Toggle showing incomplete sessions in production mode."""
+    global show_incomplete_in_production
+    
+    show_incomplete_in_production = not show_incomplete_in_production
+    status = "enabled" if show_incomplete_in_production else "disabled"
+    flash(f'Show incomplete sessions {status}', 'success')
     
     return redirect(url_for('dashboard'))
 
