@@ -255,14 +255,15 @@ def dashboard():
         print(f"DEBUG: Included participants: {included_participants}")
         print(f"DEBUG: Total included data rows: {len(included_data)}")
         
-        # Basic stats like in the screenshots
+        # IMPORTANT: Dashboard statistics are calculated ONLY from completed CSV files
+        # Session data (incomplete participants) is NEVER included in these counts
         dashboard_stats = {
-            'total_participants': len(included_participants),
-            'total_responses': len(included_data) if len(included_data) > 0 else 0,  # Use included responses, not raw
+            'total_participants': len(included_participants),  # Only completed CSV data
+            'total_responses': len(included_data) if len(included_data) > 0 else 0,  # Only completed CSV data
             'avg_trust_rating': included_data['trust_rating'].mean() if len(included_data) > 0 else 0,
             'std_trust_rating': included_data['trust_rating'].std() if len(included_data) > 0 else 0,
-            'included_participants': len(included_participants),
-            'cleaned_trials': len(included_data) if len(included_data) > 0 else 0,
+            'included_participants': len(included_participants),  # Only completed CSV data
+            'cleaned_trials': len(included_data) if len(included_data) > 0 else 0,  # Only completed CSV data
             'raw_responses': exclusion_summary['total_raw'],
             'excluded_responses': exclusion_summary['total_raw'] - len(included_data) if len(included_data) > 0 else exclusion_summary['total_raw']
         }
@@ -270,7 +271,9 @@ def dashboard():
         # Get available filters
         available_filters = data_filter.get_available_filters()
         
-        # Get list of data files with proper tagging and session data
+        # ================================================================================================
+        # FILE LIST SECTION: Session data is ONLY for monitoring display - NEVER affects statistics
+        # ================================================================================================
         data_files = []
         session_data = []
         
