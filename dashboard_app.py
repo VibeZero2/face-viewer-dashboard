@@ -335,11 +335,8 @@ def dashboard():
                     if data_cleaner.test_mode:
                         show_session = True  # Test mode shows everything
                     else:
-                        # Production mode: show non-test sessions only if incomplete toggle is enabled
-                        if is_test_session:
-                            show_session = False  # Never show test sessions in production
-                        else:
-                            show_session = show_incomplete_in_production  # Show real sessions only if toggle enabled
+                        # Production mode: show ALL sessions (test and real) if incomplete toggle is enabled
+                        show_session = show_incomplete_in_production  # Show any sessions if toggle enabled
                     
                     if show_session and not session_complete:
                         total_faces = len(session_info.get('face_order', []))
