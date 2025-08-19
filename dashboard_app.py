@@ -221,7 +221,7 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/')
-@login_required
+# @login_required  # Temporarily disabled for Render deployment
 def dashboard():
     """Main dashboard page."""
     global data_cleaner, statistical_analyzer, data_filter
@@ -386,7 +386,7 @@ def dashboard():
         return render_template('error.html', message=str(e))
 
 @app.route('/api/overview')
-@login_required
+# @login_required  # Temporarily disabled for Render deployment
 def api_overview():
     """API endpoint for overview statistics."""
     global data_cleaner, statistical_analyzer
@@ -831,7 +831,7 @@ def api_live_updates():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/toggle_mode', methods=['GET', 'POST'])
-@login_required
+# @login_required  # Temporarily disabled for Render deployment
 def toggle_mode():
     """Toggle between production and test modes."""
     global data_cleaner
@@ -850,7 +850,7 @@ def toggle_mode():
     return redirect(url_for('dashboard'))
 
 @app.route('/toggle_incomplete', methods=['POST'])
-@login_required
+# @login_required  # Temporarily disabled for Render deployment
 def toggle_incomplete():
     """Toggle showing incomplete sessions in production mode."""
     global show_incomplete_in_production
