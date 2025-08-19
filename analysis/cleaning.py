@@ -390,11 +390,23 @@ class DataCleaner:
             # For test data, be more lenient (50% instead of 80%)
             # But only if it's actually test data (not real participant data)
             is_test_data = any(test_pattern in str(participant) for test_pattern in ['test_', 'test123', 'test456', 'test789'])
-            min_completion_rate = 0.5 if (actual_trials < 48 and is_test_data) else 0.8  # 48 = 80% of 60
             
-            if completion_rate < min_completion_rate:
-                df.loc[df['pid'] == participant, 'include_in_primary'] = False
-                summary['exclusion_reasons']['low_completion'] = summary['exclusion_reasons'].get('low_completion', 0) + 1
+            # Real participant files (participant_P*.csv) should not be excluded for completion rate
+            is_real_participant = str(participant).startswith('P') and len(str(participant)) >= 2
+            
+            if is_real_participant:
+                # Don't exclude real participants for completion rate
+                pass
+            elif is_test_data:
+                min_completion_rate = 0.5  # 50% for test data
+                if completion_rate < min_completion_rate:
+                    df.loc[df['pid'] == participant, 'include_in_primary'] = False
+                    summary['exclusion_reasons']['low_completion'] = summary['exclusion_reasons'].get('low_completion', 0) + 1
+            else:
+                min_completion_rate = 0.8  # 80% for other data
+                if completion_rate < min_completion_rate:
+                    df.loc[df['pid'] == participant, 'include_in_primary'] = False
+                    summary['exclusion_reasons']['low_completion'] = summary['exclusion_reasons'].get('low_completion', 0) + 1
             
             if attention_failed:
                 df.loc[df['pid'] == participant, 'excl_failed_attention'] = True
