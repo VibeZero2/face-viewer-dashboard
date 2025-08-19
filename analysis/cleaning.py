@@ -46,14 +46,23 @@ class DataCleaner:
             for file_path in csv_files:
                 file_name = file_path.name
                 
+                # Exclude test files first (regardless of other patterns)
+                if (file_name.startswith('test_') or 
+                    file_name.startswith('test_participant') or
+                    'test_statistical_validation' in file_name or
+                    file_name.startswith('PROLIFIC_TEST_') or
+                    file_name == 'test789.csv'):
+                    excluded_files.append(file_name)
+                    continue
+                
                 # Include real participant files
                 if file_name.startswith('participant_'):
                     filtered_files.append(file_path)
-                # Include study program files (timestamped or with Prolific IDs)
-                elif any(pattern in file_name for pattern in ['_2025', 'PROLIFIC_', 'test789']):
+                # Include study program files (timestamped files that are NOT test files)
+                elif '_2025' in file_name and not file_name.startswith('test_'):
                     filtered_files.append(file_path)
-                # Include files that look like real study data (not test files)
-                elif not file_name.startswith('test_') and not file_name.startswith('test_participant'):
+                # Include other files that look like real study data
+                elif not file_name.startswith('test_'):
                     filtered_files.append(file_path)
                 else:
                     excluded_files.append(file_name)
@@ -84,7 +93,7 @@ class DataCleaner:
                 
                 # Count real participants (files that look like real data)
                 if (file_path.name.startswith('participant_') or 
-                    any(pattern in file_path.name for pattern in ['_2025', 'PROLIFIC_', 'test789'])):
+                    ('_2025' in file_path.name and not file_path.name.startswith('test_'))):
                     real_participants += 1
                 
                 total_rows += len(df)
@@ -121,7 +130,7 @@ class DataCleaner:
         
         for file_name in self.raw_data['source_file'].unique():
             if (file_name.startswith('participant_') or 
-                any(pattern in file_name for pattern in ['_2025', 'PROLIFIC_', 'test789'])):
+                ('_2025' in file_name and not file_name.startswith('test_'))):
                 real_files.append(file_name)
             else:
                 test_files.append(file_name)
