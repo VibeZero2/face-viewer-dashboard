@@ -13,6 +13,10 @@ from functools import wraps
 import io
 import zipfile
 import tempfile
+import threading
+import time
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
 # Add the analysis directory to the path
 sys.path.append(os.path.join(os.path.dirname(__file__), 'analysis'))
@@ -30,10 +34,52 @@ app.config['DEBUG'] = True
 data_cleaner = None
 statistical_analyzer = None
 data_filter = None
+last_data_refresh = None
+data_files_hash = None
+
+class DataFileHandler(FileSystemEventHandler):
+    """Watchdog handler for detecting new data files"""
+    
+    def __init__(self, dashboard_app):
+        self.dashboard_app = dashboard_app
+        self.last_modified = {}
+    
+    def on_created(self, event):
+        if not event.is_directory and event.src_path.endswith('.csv'):
+            print(f"🆕 New data file detected: {event.src_path}")
+            self.dashboard_app.trigger_data_refresh()
+    
+    def on_modified(self, event):
+        if not event.is_directory and event.src_path.endswith('.csv'):
+            # Avoid duplicate triggers for the same file
+            current_time = time.time()
+            if (event.src_path not in self.last_modified or 
+                current_time - self.last_modified[event.src_path] > 1):
+                print(f"📝 Data file modified: {event.src_path}")
+                self.last_modified[event.src_path] = current_time
+                self.dashboard_app.trigger_data_refresh()
+
+def start_file_watcher():
+    """Start watching the data directory for new files"""
+    try:
+        data_dir = Path("data/responses")
+        if data_dir.exists():
+            event_handler = DataFileHandler(app)
+            observer = Observer()
+            observer.schedule(event_handler, str(data_dir), recursive=False)
+            observer.start()
+            print(f"👀 Started watching data directory: {data_dir}")
+            return observer
+        else:
+            print(f"⚠️ Data directory not found: {data_dir}")
+            return None
+    except Exception as e:
+        print(f"❌ Error starting file watcher: {e}")
+        return None
 
 def initialize_data(test_mode=False):
     """Initialize data processing components."""
-    global data_cleaner, statistical_analyzer, data_filter
+    global data_cleaner, statistical_analyzer, data_filter, last_data_refresh
     
     try:
         # Use production mode by default (only real study data)
@@ -45,11 +91,34 @@ def initialize_data(test_mode=False):
         statistical_analyzer = StatisticalAnalyzer(data_cleaner)
         data_filter = DataFilter(data_cleaner)
         
+        last_data_refresh = datetime.now()
         print("Data initialized successfully")
         return True
     except Exception as e:
         print(f"Error initializing data: {e}")
         return False
+
+def trigger_data_refresh():
+    """Trigger a data refresh when new files are detected"""
+    global last_data_refresh
+    
+    try:
+        print("🔄 Triggering data refresh...")
+        if initialize_data():
+            last_data_refresh = datetime.now()
+            print("✅ Data refresh completed")
+        else:
+            print("❌ Data refresh failed")
+    except Exception as e:
+        print(f"❌ Error during data refresh: {e}")
+
+# Start file watcher in a separate thread
+file_observer = None
+if not app.config['DEBUG']:  # Only in production mode
+    file_observer = start_file_watcher()
+
+# Initialize data on startup
+initialize_data()
 
 # Simple file-based user authentication
 import json
@@ -562,6 +631,89 @@ def health():
             'status': 'healthy',
             'data_rows': len(cleaned_data),
             'participants': cleaned_data['pid'].nunique() if 'pid' in cleaned_data.columns else cleaned_data.get('participant_id', pd.Series()).nunique(),
+            'timestamp': datetime.now().isoformat(),
+            'last_refresh': last_data_refresh.isoformat() if last_data_refresh else None,
+            'live_monitoring': file_observer is not None
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/refresh_data', methods=['POST'])
+@login_required
+def api_refresh_data():
+    """API endpoint to manually refresh data."""
+    try:
+        trigger_data_refresh()
+        return jsonify({
+            'status': 'success',
+            'message': 'Data refresh triggered',
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/data_status')
+@login_required
+def api_data_status():
+    """API endpoint to get current data status."""
+    try:
+        if data_cleaner is None:
+            return jsonify({'status': 'no_data'}), 503
+        
+        cleaned_data = data_cleaner.get_cleaned_data()
+        data_summary = data_cleaner.get_data_summary()
+        
+        # Get list of data files
+        data_files = []
+        data_dir = Path("data/responses")
+        if data_dir.exists():
+            for file_path in data_dir.glob("*.csv"):
+                stat = file_path.stat()
+                data_files.append({
+                    'name': file_path.name,
+                    'size': f"{stat.st_size / 1024:.1f} KB",
+                    'modified': datetime.fromtimestamp(stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                    'is_study_data': any(pattern in file_path.name for pattern in ['_2025', 'PROLIFIC_', 'test789', 'participant_'])
+                })
+        
+        return jsonify({
+            'status': 'success',
+            'data_rows': len(cleaned_data),
+            'participants': cleaned_data['pid'].nunique() if 'pid' in cleaned_data.columns else 0,
+            'data_summary': data_summary,
+            'data_files': data_files,
+            'last_refresh': last_data_refresh.isoformat() if last_data_refresh else None,
+            'live_monitoring': file_observer is not None,
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/live_updates')
+@login_required
+def api_live_updates():
+    """API endpoint for live data updates (for real-time dashboard updates)."""
+    try:
+        if data_cleaner is None:
+            return jsonify({'status': 'no_data'}), 503
+        
+        cleaned_data = data_cleaner.get_cleaned_data()
+        
+        # Get recent data (last 24 hours)
+        if 'timestamp' in cleaned_data.columns:
+            recent_data = cleaned_data[
+                cleaned_data['timestamp'] >= (datetime.now() - pd.Timedelta(hours=24))
+            ]
+        else:
+            recent_data = cleaned_data
+        
+        return jsonify({
+            'status': 'success',
+            'total_participants': cleaned_data['pid'].nunique() if 'pid' in cleaned_data.columns else 0,
+            'recent_participants': recent_data['pid'].nunique() if 'pid' in recent_data.columns else 0,
+            'total_trials': len(cleaned_data),
+            'recent_trials': len(recent_data),
+            'last_refresh': last_data_refresh.isoformat() if last_data_refresh else None,
             'timestamp': datetime.now().isoformat()
         })
     except Exception as e:
