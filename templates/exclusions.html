@@ -449,43 +449,58 @@
         document.addEventListener('DOMContentLoaded', function() {
             const ctx = document.getElementById('exclusionChart');
             if (ctx) {
-                const exclusionData = {
-                    labels: ['Included', 'Excluded'],
-                    datasets: [{
-                        data: [
-                            {{ exclusion_summary.trial_level.total_trials - exclusion_summary.trial_level.excluded_trials }},
-                            {{ exclusion_summary.trial_level.excluded_trials }}
-                        ],
-                        backgroundColor: [
-                            'rgba(40, 167, 69, 0.8)',
-                            'rgba(220, 53, 69, 0.8)'
-                        ],
-                        borderColor: [
-                            'rgba(40, 167, 69, 1)',
-                            'rgba(220, 53, 69, 1)'
-                        ],
-                        borderWidth: 2
-                    }]
-                };
+                // Get data with fallbacks to prevent undefined values
+                const totalTrials = {{ exclusion_summary.trial_level.total_trials|default(0) }};
+                const excludedTrials = {{ exclusion_summary.trial_level.excluded_trials|default(0) }};
+                const includedTrials = Math.max(0, totalTrials - excludedTrials);
                 
-                new Chart(ctx, {
-                    type: 'doughnut',
-                    data: exclusionData,
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    font: {
-                                        size: 10
+                // Only create chart if we have valid data
+                if (totalTrials > 0) {
+                    const exclusionData = {
+                        labels: ['Included', 'Excluded'],
+                        datasets: [{
+                            data: [includedTrials, excludedTrials],
+                            backgroundColor: [
+                                'rgba(40, 167, 69, 0.8)',
+                                'rgba(220, 53, 69, 0.8)'
+                            ],
+                            borderColor: [
+                                'rgba(40, 167, 69, 1)',
+                                'rgba(220, 53, 69, 1)'
+                            ],
+                            borderWidth: 2
+                        }]
+                    };
+                    
+                    new Chart(ctx, {
+                        type: 'doughnut',
+                        data: exclusionData,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            animation: {
+                                duration: 1000
+                            },
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        font: {
+                                            size: 10
+                                        }
                                     }
                                 }
                             }
                         }
+                    });
+                } else {
+                    // Show message if no data
+                    ctx.style.display = 'none';
+                    const parent = ctx.parentElement;
+                    if (parent) {
+                        parent.innerHTML = '<p class="text-muted text-center">No exclusion data available</p>';
                     }
-                });
+                }
             }
         });
     </script>
