@@ -215,7 +215,7 @@
                                         {% for participant in participants %}
                                         <tr>
                                             <td>
-                                                <a href="{{ url_for('participant_detail', pid=participant.pid) }}" class="text-decoration-none">
+                                                <a href="#" class="text-decoration-none participant-link" data-pid="{{ participant.pid }}">
                                                     <i class="fas fa-user me-1"></i><strong>{{ participant.pid }}</strong>
                                                 </a>
                                             </td>
@@ -250,6 +250,141 @@
                             </div>
                         {% endif %}
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Participant Details Modal -->
+    <div class="modal fade" id="participantModal" tabindex="-1" aria-labelledby="participantModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="participantModalLabel">
+                        <i class="fas fa-user me-2"></i>
+                        <span id="modalParticipantId">Participant Details</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Loading spinner -->
+                    <div id="loadingSpinner" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading participant data...</p>
+                    </div>
+                    
+                    <!-- Participant Info -->
+                    <div id="participantInfo" style="display: none;">
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-muted">Total Trials</h6>
+                                        <h3 class="text-primary" id="totalTrials">-</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-muted">Mean Trust</h6>
+                                        <h3 class="text-success" id="meanTrust">-</h3>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-muted">Start Time</h6>
+                                        <h6 class="text-info" id="startTime">-</h6>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="card text-center">
+                                    <div class="card-body">
+                                        <h6 class="card-title text-muted">End Time</h6>
+                                        <h6 class="text-warning" id="endTime">-</h6>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Charts Row 1 -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6><i class="fas fa-chart-line me-2"></i>Trust Ratings Over Time</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="trustOverTimeChart" width="400" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6><i class="fas fa-chart-bar me-2"></i>Trust by Face Version</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="trustByVersionChart" width="400" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Charts Row 2 -->
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6><i class="fas fa-chart-pie me-2"></i>Trust by Face ID</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="trustByFaceChart" width="400" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6><i class="fas fa-clock me-2"></i>Response Times</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="responseTimeChart" width="400" height="200"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Survey Responses -->
+                        <div class="row" id="surveySection" style="display: none;">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6><i class="fas fa-clipboard-list me-2"></i>Survey Responses</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row" id="surveyResponses">
+                                            <!-- Survey data will be populated here -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Error message -->
+                    <div id="errorMessage" class="alert alert-danger" style="display: none;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span id="errorText">An error occurred while loading participant data.</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -361,6 +496,261 @@
                             }
                         }
                     }
+                });
+            }
+            
+            // Participant Modal Functionality
+            let participantCharts = {};
+            
+            // Handle participant link clicks
+            document.querySelectorAll('.participant-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const pid = this.getAttribute('data-pid');
+                    loadParticipantData(pid);
+                });
+            });
+            
+            function loadParticipantData(pid) {
+                // Show modal and loading spinner
+                const modal = new bootstrap.Modal(document.getElementById('participantModal'));
+                modal.show();
+                
+                document.getElementById('modalParticipantId').textContent = pid;
+                document.getElementById('loadingSpinner').style.display = 'block';
+                document.getElementById('participantInfo').style.display = 'none';
+                document.getElementById('errorMessage').style.display = 'none';
+                
+                // Clear existing charts
+                Object.values(participantCharts).forEach(chart => {
+                    if (chart) chart.destroy();
+                });
+                participantCharts = {};
+                
+                // Fetch participant data
+                fetch(`/api/participant/${pid}/details`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        displayParticipantData(data);
+                    })
+                    .catch(error => {
+                        console.error('Error loading participant data:', error);
+                        document.getElementById('loadingSpinner').style.display = 'none';
+                        document.getElementById('errorText').textContent = error.message;
+                        document.getElementById('errorMessage').style.display = 'block';
+                    });
+            }
+            
+            function displayParticipantData(data) {
+                // Hide loading spinner and show data
+                document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('participantInfo').style.display = 'block';
+                
+                // Update participant info
+                const info = data.participant_info;
+                document.getElementById('totalTrials').textContent = info.total_trials;
+                document.getElementById('meanTrust').textContent = info.mean_trust ? info.mean_trust.toFixed(2) : 'N/A';
+                document.getElementById('startTime').textContent = info.start_time ? new Date(info.start_time).toLocaleString() : 'N/A';
+                document.getElementById('endTime').textContent = info.end_time ? new Date(info.end_time).toLocaleString() : 'N/A';
+                
+                // Create charts
+                createTrustOverTimeChart(data.trust_over_time);
+                createTrustByVersionChart(data.trust_by_version);
+                createTrustByFaceChart(data.trust_by_face);
+                createResponseTimeChart(data.response_times);
+                createSurveyResponses(data.survey_responses);
+            }
+            
+            function createTrustOverTimeChart(trustData) {
+                const ctx = document.getElementById('trustOverTimeChart');
+                if (!ctx || !trustData || trustData.length === 0) return;
+                
+                const labels = trustData.map((item, index) => `Trial ${index + 1}`);
+                const values = trustData.map(item => item.trust_rating);
+                
+                participantCharts.trustOverTime = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Trust Rating',
+                            data: values,
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                            tension: 0.1,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 7,
+                                title: {
+                                    display: true,
+                                    text: 'Trust Rating'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Trial Number'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            function createTrustByVersionChart(versionData) {
+                const ctx = document.getElementById('trustByVersionChart');
+                if (!ctx || !versionData || Object.keys(versionData).length === 0) return;
+                
+                const labels = Object.keys(versionData);
+                const values = labels.map(key => versionData[key].mean);
+                const colors = ['rgba(255, 99, 132, 0.8)', 'rgba(54, 162, 235, 0.8)', 'rgba(255, 205, 86, 0.8)'];
+                
+                participantCharts.trustByVersion = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Mean Trust Rating',
+                            data: values,
+                            backgroundColor: colors.slice(0, labels.length),
+                            borderColor: colors.slice(0, labels.length).map(color => color.replace('0.8', '1')),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 7,
+                                title: {
+                                    display: true,
+                                    text: 'Trust Rating'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            function createTrustByFaceChart(faceData) {
+                const ctx = document.getElementById('trustByFaceChart');
+                if (!ctx || !faceData || Object.keys(faceData).length === 0) return;
+                
+                const labels = Object.keys(faceData);
+                const values = labels.map(key => faceData[key].mean);
+                
+                participantCharts.trustByFace = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)',
+                                'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 205, 86, 0.8)',
+                                'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)'
+                            ]
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+            
+            function createResponseTimeChart(responseTimes) {
+                const ctx = document.getElementById('responseTimeChart');
+                if (!ctx || !responseTimes || responseTimes.length === 0) return;
+                
+                const labels = responseTimes.map((_, index) => `Response ${index + 1}`);
+                
+                participantCharts.responseTime = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Response Time (seconds)',
+                            data: responseTimes,
+                            borderColor: 'rgba(255, 159, 64, 1)',
+                            backgroundColor: 'rgba(255, 159, 64, 0.1)',
+                            tension: 0.1,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Time (seconds)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Response Number'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            function createSurveyResponses(surveyData) {
+                const surveySection = document.getElementById('surveySection');
+                const surveyResponses = document.getElementById('surveyResponses');
+                
+                if (!surveyData || Object.keys(surveyData).length === 0) {
+                    surveySection.style.display = 'none';
+                    return;
+                }
+                
+                surveySection.style.display = 'block';
+                surveyResponses.innerHTML = '';
+                
+                const surveyLabels = {
+                    'trust_q1': 'Trust Question 1',
+                    'trust_q2': 'Trust Question 2',
+                    'trust_q3': 'Trust Question 3',
+                    'pers_q1': 'Personality Question 1',
+                    'pers_q2': 'Personality Question 2',
+                    'pers_q3': 'Personality Question 3',
+                    'pers_q4': 'Personality Question 4',
+                    'pers_q5': 'Personality Question 5'
+                };
+                
+                Object.entries(surveyData).forEach(([key, data]) => {
+                    const col = document.createElement('div');
+                    col.className = 'col-md-6 col-lg-4 mb-3';
+                    col.innerHTML = `
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">${surveyLabels[key] || key}</h6>
+                                <h4 class="text-primary">${data.mean.toFixed(2)}</h4>
+                                <small class="text-muted">Mean (n=${data.count})</small>
+                            </div>
+                        </div>
+                    `;
+                    surveyResponses.appendChild(col);
                 });
             }
         });

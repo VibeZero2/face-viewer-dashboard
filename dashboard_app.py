@@ -1292,6 +1292,105 @@ def export_methodology_report():
         flash(f'PDF generation error: {str(e)}', 'error')
         return redirect(url_for('dashboard'))
 
+@app.route('/api/participant/<pid>/details')
+@login_required
+def api_participant_details(pid):
+    """API endpoint to get detailed participant data for popup graphs."""
+    try:
+        if data_cleaner is None:
+            return jsonify({'error': 'Data not initialized'}), 500
+        
+        cleaned_data = data_cleaner.get_cleaned_data()
+        participant_data = cleaned_data[cleaned_data['pid'] == pid]
+        
+        if len(participant_data) == 0:
+            return jsonify({'error': 'Participant not found'}), 404
+        
+        # Basic participant info
+        participant_info = {
+            'pid': pid,
+            'total_trials': len(participant_data),
+            'start_time': participant_data['timestamp'].min().isoformat() if 'timestamp' in participant_data.columns else None,
+            'end_time': participant_data['timestamp'].max().isoformat() if 'timestamp' in participant_data.columns else None,
+            'mean_trust': participant_data['trust_rating'].mean() if 'trust_rating' in participant_data.columns else None,
+            'std_trust': participant_data['trust_rating'].std() if 'trust_rating' in participant_data.columns else None,
+        }
+        
+        # Trust ratings over time
+        trust_over_time = []
+        if 'timestamp' in participant_data.columns and 'trust_rating' in participant_data.columns:
+            time_data = participant_data[['timestamp', 'trust_rating']].dropna()
+            time_data = time_data.sort_values('timestamp')
+            trust_over_time = [
+                {
+                    'timestamp': row['timestamp'].isoformat() if hasattr(row['timestamp'], 'isoformat') else str(row['timestamp']),
+                    'trust_rating': float(row['trust_rating'])
+                }
+                for _, row in time_data.iterrows()
+            ]
+        
+        # Trust ratings by face version
+        trust_by_version = {}
+        if 'version' in participant_data.columns and 'trust_rating' in participant_data.columns:
+            for version in participant_data['version'].unique():
+                if pd.notna(version):
+                    version_data = participant_data[participant_data['version'] == version]['trust_rating'].dropna()
+                    if len(version_data) > 0:
+                        trust_by_version[version] = {
+                            'mean': float(version_data.mean()),
+                            'std': float(version_data.std()),
+                            'count': int(len(version_data))
+                        }
+        
+        # Trust ratings by face ID
+        trust_by_face = {}
+        if 'face_id' in participant_data.columns and 'trust_rating' in participant_data.columns:
+            for face_id in participant_data['face_id'].unique():
+                if pd.notna(face_id):
+                    face_data = participant_data[participant_data['face_id'] == face_id]['trust_rating'].dropna()
+                    if len(face_data) > 0:
+                        trust_by_face[face_id] = {
+                            'mean': float(face_data.mean()),
+                            'std': float(face_data.std()),
+                            'count': int(len(face_data))
+                        }
+        
+        # Response time analysis (if available)
+        response_times = []
+        if 'timestamp' in participant_data.columns:
+            time_data = participant_data[['timestamp']].dropna()
+            time_data = time_data.sort_values('timestamp')
+            if len(time_data) > 1:
+                # Calculate time differences between consecutive responses
+                time_diffs = time_data['timestamp'].diff().dropna()
+                response_times = [float(td.total_seconds()) for td in time_diffs if pd.notna(td)]
+        
+        # Survey responses (if available)
+        survey_responses = {}
+        survey_columns = ['trust_q1', 'trust_q2', 'trust_q3', 'pers_q1', 'pers_q2', 'pers_q3', 'pers_q4', 'pers_q5']
+        for col in survey_columns:
+            if col in participant_data.columns:
+                values = participant_data[col].dropna()
+                if len(values) > 0:
+                    survey_responses[col] = {
+                        'values': [float(v) for v in values if pd.notna(v)],
+                        'mean': float(values.mean()),
+                        'count': int(len(values))
+                    }
+        
+        return jsonify({
+            'participant_info': participant_info,
+            'trust_over_time': trust_over_time,
+            'trust_by_version': trust_by_version,
+            'trust_by_face': trust_by_face,
+            'response_times': response_times,
+            'survey_responses': survey_responses,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Initialize data on startup
     if initialize_data():
