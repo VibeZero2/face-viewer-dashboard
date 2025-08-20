@@ -290,7 +290,9 @@ def dashboard():
                     file_name.startswith('test_participant') or
                     'test_statistical_validation' in file_name or
                     file_name.startswith('PROLIFIC_TEST_') or
-                    file_name in ['test789.csv', 'test123.csv', 'test456.csv']
+                    file_name in ['test789.csv', 'test123.csv', 'test456.csv'] or
+                    # Also treat numeric participant IDs as test files (like 200.csv)
+                    (file_name.replace('.csv', '').isdigit())
                 )
                 
                 # Debug: Print file classification
