@@ -379,13 +379,15 @@ def dashboard():
                                 if is_complete:
                                     completed_faces_count += 1
                                     print(f"DEBUG: Face {face_id} - COMPLETE")
-                                else:
+                                elif len(face_responses) > 0:
                                     # Count partial progress - if we have any responses for this face, count it as partial
-                                    if len(face_responses) > 0:
-                                        completed_faces_count += 0.5  # Count as half a face for partial progress
-                                        print(f"DEBUG: Face {face_id} - PARTIAL PROGRESS (0.5)")
-                                    # Stop at first incomplete face (they're processed in order)
-                                    print(f"DEBUG: Face {face_id} - INCOMPLETE, stopping")
+                                    completed_faces_count += 0.5  # Count as half a face for partial progress
+                                    print(f"DEBUG: Face {face_id} - PARTIAL PROGRESS (0.5)")
+                                    # Continue to next face instead of stopping
+                                    continue
+                                else:
+                                    # No responses for this face - stop here
+                                    print(f"DEBUG: Face {face_id} - NO RESPONSES, stopping")
                                     break
                         
                         completed_faces = completed_faces_count
