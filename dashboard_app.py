@@ -349,9 +349,32 @@ def dashboard():
                     print(f"DEBUG: Session {participant_id} - show_session: {show_session}, not complete: {not session_complete}")
                     
                     if show_session and not session_complete:
-                        total_faces = len(session_info.get('face_order', []))
-                        current_index = session_info.get('index', 0)
-                        completed_faces = current_index // 2  # Each face has 2 stages
+                        face_order = session_info.get('face_order', [])
+                        total_faces = len(face_order)
+                        
+                        # IMPORTANT: Calculate completed faces the same way as session resume
+                        # Analyze actual responses to determine which faces are complete
+                        responses = session_info.get('responses', [])
+                        completed_faces_count = 0
+                        
+                        if face_order and responses:
+                            # Check each face in the original order
+                            for face_id in face_order:
+                                # Get all responses for this specific face
+                                face_responses = [r for r in responses if len(r) >= 4 and r[2] == face_id]
+                                toggle_responses = [r for r in face_responses if r[3] in ['left', 'right']]
+                                full_responses = [r for r in face_responses if r[3] == 'full']
+                                
+                                # Face is complete ONLY if it has both left+right (toggle) AND full responses
+                                is_complete = len(toggle_responses) >= 2 and len(full_responses) >= 1
+                                
+                                if is_complete:
+                                    completed_faces_count += 1
+                                else:
+                                    # Stop at first incomplete face (they're processed in order)
+                                    break
+                        
+                        completed_faces = completed_faces_count
                         progress_percent = (completed_faces / total_faces * 100) if total_faces > 0 else 0
                         
                         session_data.append({
@@ -362,6 +385,7 @@ def dashboard():
                             'status': f'Incomplete ({progress_percent:.1f}%)',
                             'participant_id': participant_id
                         })
+                        print(f"DEBUG: Session {participant_id} - Calculated progress: {completed_faces}/{total_faces} faces ({progress_percent:.1f}%), {len(responses)} total responses")
                         print(f"DEBUG: Added session {participant_id} to session_data")
                         
                 except Exception as e:
