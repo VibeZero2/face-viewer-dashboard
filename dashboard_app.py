@@ -314,7 +314,11 @@ def dashboard():
                     })
         
         # Load session data (incomplete participants)
-        sessions_dir = Path("data/sessions")
+        # Try study program sessions first, then fallback to dashboard sessions
+        sessions_dir = Path("../facial-trust-study/data/sessions")
+        if not sessions_dir.exists():
+            sessions_dir = Path("data/sessions")
+        print(f"DEBUG: Using sessions directory: {sessions_dir}")
         if sessions_dir.exists():
             import json
             session_data = []
