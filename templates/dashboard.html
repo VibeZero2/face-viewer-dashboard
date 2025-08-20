@@ -602,20 +602,72 @@
         // Update timestamp on page load
         updateTimestamp();
         
-        // Auto-refresh data every 30 seconds
-        setInterval(function() {
+        // Auto-refresh data with error handling and circuit breaker
+        let failureCount = 0;
+        const maxFailures = 3;
+        let refreshInterval = 30000; // Start with 30 seconds
+        
+        function refreshData() {
+            // Circuit breaker: if too many failures, increase interval
+            if (failureCount >= maxFailures) {
+                refreshInterval = 120000; // 2 minutes after failures
+                console.log('API errors detected, reducing refresh frequency');
+            }
+            
             fetch('/api/overview')
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.exclusion_summary) {
-                        document.getElementById('total-participants').textContent = data.exclusion_summary.session_level.total_sessions;
-                        document.getElementById('total-responses').textContent = data.exclusion_summary.total_raw;
-                        document.getElementById('avg-trust-rating').textContent = data.dashboard_stats ? data.dashboard_stats.avg_trust_rating.toFixed(1) : '0';
-                        document.getElementById('std-trust-rating').textContent = data.dashboard_stats ? data.dashboard_stats.std_trust_rating.toFixed(2) : '0';
+                    // Reset failure count on success
+                    failureCount = 0;
+                    refreshInterval = 30000; // Reset to normal interval
+                    
+                    if (data.status === 'success' && data.exclusion_summary) {
+                        // Update elements if they exist
+                        const totalParticipants = document.getElementById('total-participants');
+                        const totalResponses = document.getElementById('total-responses');
+                        const avgTrust = document.getElementById('avg-trust-rating');
+                        const stdTrust = document.getElementById('std-trust-rating');
+                        
+                        if (totalParticipants && data.exclusion_summary.session_level) {
+                            totalParticipants.textContent = data.exclusion_summary.session_level.total_sessions || '0';
+                        }
+                        if (totalResponses) {
+                            totalResponses.textContent = data.exclusion_summary.total_raw || '0';
+                        }
+                        if (avgTrust && data.dashboard_stats) {
+                            avgTrust.textContent = data.dashboard_stats.avg_trust_rating ? data.dashboard_stats.avg_trust_rating.toFixed(1) : '0';
+                        }
+                        if (stdTrust && data.dashboard_stats) {
+                            stdTrust.textContent = data.dashboard_stats.std_trust_rating ? data.dashboard_stats.std_trust_rating.toFixed(2) : '0';
+                        }
                     }
                 })
-                .catch(error => console.error('Error refreshing data:', error));
-        }, 30000);
+                .catch(error => {
+                    failureCount++;
+                    console.error(`Error refreshing data (${failureCount}/${maxFailures}):`, error);
+                    
+                    // Optionally show user feedback for repeated failures
+                    if (failureCount >= maxFailures) {
+                        console.warn('Multiple API failures detected. Auto-refresh slowed down.');
+                    }
+                });
+        }
+        
+        // Start auto-refresh with adaptive interval
+        function startAutoRefresh() {
+            refreshData(); // Initial call
+            setTimeout(function() {
+                startAutoRefresh(); // Recursive call with current interval
+            }, refreshInterval);
+        }
+        
+        // Start the adaptive refresh cycle
+        startAutoRefresh();
     </script>
 </body>
 </html>

@@ -391,21 +391,46 @@ def api_overview():
     """API endpoint for overview statistics."""
     global data_cleaner, statistical_analyzer
     
-    if data_cleaner is None or statistical_analyzer is None:
-        if not initialize_data():
-            return jsonify({'error': 'Data initialization failed'}), 500
-    
     try:
-        exclusion_summary = data_cleaner.get_exclusion_summary()
-        descriptive_stats = statistical_analyzer.get_descriptive_stats()
+        # Check if components are initialized
+        if data_cleaner is None or statistical_analyzer is None:
+            print("DEBUG: API Overview - Initializing data components...")
+            if not initialize_data():
+                print("ERROR: API Overview - Data initialization failed")
+                return jsonify({'error': 'Data initialization failed'}), 500
+            print("DEBUG: API Overview - Data components initialized successfully")
         
-        return jsonify({
+        # Get data with error handling
+        try:
+            exclusion_summary = data_cleaner.get_exclusion_summary()
+            print("DEBUG: API Overview - Got exclusion summary")
+        except Exception as e:
+            print(f"ERROR: API Overview - Failed to get exclusion summary: {e}")
+            exclusion_summary = {'error': f'Exclusion summary failed: {str(e)}'}
+        
+        try:
+            descriptive_stats = statistical_analyzer.get_descriptive_stats()
+            print("DEBUG: API Overview - Got descriptive stats")
+        except Exception as e:
+            print(f"ERROR: API Overview - Failed to get descriptive stats: {e}")
+            descriptive_stats = {'error': f'Descriptive stats failed: {str(e)}'}
+        
+        response_data = {
             'exclusion_summary': exclusion_summary,
             'descriptive_stats': descriptive_stats,
-            'timestamp': datetime.now().isoformat()
-        })
+            'timestamp': datetime.now().isoformat(),
+            'status': 'success'
+        }
+        
+        print("DEBUG: API Overview - Returning successful response")
+        return jsonify(response_data)
+        
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        error_msg = f"API Overview error: {str(e)}"
+        print(f"ERROR: {error_msg}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': error_msg, 'status': 'error'}), 500
 
 @app.route('/api/statistical_tests')
 @login_required
