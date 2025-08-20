@@ -357,6 +357,8 @@ def dashboard():
                         responses = session_info.get('responses', [])
                         completed_faces_count = 0
                         
+                        print(f"DEBUG: Session {participant_id} - Analyzing {len(responses)} responses")
+                        
                         if face_order and responses:
                             # Check each face in the original order
                             for face_id in face_order:
@@ -365,13 +367,17 @@ def dashboard():
                                 toggle_responses = [r for r in face_responses if r[3] in ['left', 'right']]
                                 full_responses = [r for r in face_responses if r[3] == 'full']
                                 
+                                print(f"DEBUG: Face {face_id} - toggle: {len(toggle_responses)}, full: {len(full_responses)}")
+                                
                                 # Face is complete ONLY if it has both left+right (toggle) AND full responses
                                 is_complete = len(toggle_responses) >= 2 and len(full_responses) >= 1
                                 
                                 if is_complete:
                                     completed_faces_count += 1
+                                    print(f"DEBUG: Face {face_id} - COMPLETE")
                                 else:
                                     # Stop at first incomplete face (they're processed in order)
+                                    print(f"DEBUG: Face {face_id} - INCOMPLETE, stopping")
                                     break
                         
                         completed_faces = completed_faces_count
@@ -439,9 +445,20 @@ def api_overview():
             print(f"ERROR: API Overview - Failed to get descriptive stats: {e}")
             descriptive_stats = {'error': f'Descriptive stats failed: {str(e)}'}
         
+        # Convert numpy types to native Python types for JSON serialization
+        def convert_numpy_types(obj):
+            if hasattr(obj, 'item'):  # numpy scalar
+                return obj.item()
+            elif isinstance(obj, dict):
+                return {k: convert_numpy_types(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_numpy_types(item) for item in obj]
+            else:
+                return obj
+        
         response_data = {
-            'exclusion_summary': exclusion_summary,
-            'descriptive_stats': descriptive_stats,
+            'exclusion_summary': convert_numpy_types(exclusion_summary),
+            'descriptive_stats': convert_numpy_types(descriptive_stats),
             'timestamp': datetime.now().isoformat(),
             'status': 'success'
         }
