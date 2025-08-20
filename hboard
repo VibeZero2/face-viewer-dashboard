@@ -1,0 +1,5 @@
+[33mda07f0f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Fix CSV file classification - Treat numeric participant IDs like 200.csv as test files
+[33m3be15da[m FIX: Count all completed faces instead of stopping at first incomplete
+[33me3e4096[m FIX: Dashboard shows partial progress for incomplete faces
+[33m3a40282[m FIX: Dashboard to read session files from study program directory
+[33m04b7f22[m FIX: JSON serialization error and add session progress debugging
