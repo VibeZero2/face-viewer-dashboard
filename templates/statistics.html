@@ -419,7 +419,7 @@
                                          </td>
                                          <td>η² = {{ "%.3f"|format(test_results.repeated_measures_anova.effect_size) if test_results.repeated_measures_anova.effect_size == test_results.repeated_measures_anova.effect_size else "N/A" }}</td>
                                          <td>-</td>
-                                         <td>{{ test_results.repeated_measures_anova.n_participants if test_results.repeated_measures_anova.n_participants else len(test_results.repeated_measures_anova.included_participants) }}</td>
+                                         <td>{{ test_results.repeated_measures_anova.n_participants if test_results.repeated_measures_anova.n_participants else (len(test_results.repeated_measures_anova.included_participants) if test_results.repeated_measures_anova.included_participants else 0) }}</td>
                                          <td>
                                              {% if test_results.repeated_measures_anova.pvalue and test_results.repeated_measures_anova.pvalue < 0.05 %}
                                                  <span class="badge bg-success">Significant</span>
@@ -495,9 +495,9 @@
                  datasets: [{
                      label: 'Mean Trust Rating',
                      data: [
-                         {{ test_results.repeated_measures_anova.means.left if test_results.repeated_measures_anova.means else 0 }},
-                         {{ test_results.repeated_measures_anova.means.right if test_results.repeated_measures_anova.means else 0 }},
-                         {{ test_results.repeated_measures_anova.means.full if test_results.repeated_measures_anova.means else 0 }}
+                         {{ test_results.repeated_measures_anova.means.left if test_results.repeated_measures_anova.means and test_results.repeated_measures_anova.means.left else 0 }},
+                         {{ test_results.repeated_measures_anova.means.right if test_results.repeated_measures_anova.means and test_results.repeated_measures_anova.means.right else 0 }},
+                         {{ test_results.repeated_measures_anova.means.full if test_results.repeated_measures_anova.means and test_results.repeated_measures_anova.means.full else 0 }}
                      ],
                      backgroundColor: [
                          'rgba(54, 162, 235, 0.8)',

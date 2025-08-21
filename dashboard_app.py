@@ -286,13 +286,12 @@ def dashboard():
                 # Determine if file is test or production
                 file_name = file_path.name
                 is_test_file = (
-                    file_name.startswith('test_') or 
+                    file_name.startswith('test_') or
                     file_name.startswith('test_participant') or
                     'test_statistical_validation' in file_name or
                     file_name.startswith('PROLIFIC_TEST_') or
-                    file_name in ['test789.csv', 'test123.csv', 'test456.csv'] or
-                    # Also treat numeric participant IDs as test files (like 200.csv)
-                    (file_name.replace('.csv', '').isdigit())
+                    file_name in ['test789.csv', 'test123.csv', 'test456.csv']
+                    # Note: Numeric participant IDs like 200.csv are REAL study data, not test data
                 )
                 
                 # Debug: Print file classification
@@ -339,8 +338,8 @@ def dashboard():
                     
                     # Only show incomplete sessions and apply mode filtering
                     is_test_session = (
-                        'test' in participant_id.lower() or 
-                        participant_id.isdigit()  # Numeric IDs like "200" are test
+                        'test' in participant_id.lower()
+                        # Note: Numeric IDs like "200" are REAL study data, not test data
                     )
                     
                     print(f"DEBUG: Session {participant_id} - is_test: {is_test_session}, test_mode: {data_cleaner.test_mode}, show_incomplete: {show_incomplete_in_production}")
