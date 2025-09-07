@@ -9,7 +9,8 @@ BASE_DIR = Path(__file__).resolve().parent
 
 # Data directory configuration
 # This should point to the same directory that the study program uses
-DATA_DIR = BASE_DIR / "data" / "responses"
+# FIXED: Dashboard now reads from study program's data directory
+DATA_DIR = BASE_DIR.parent / "facial-trust-study" / "data" / "responses"
 
 # Study program data directory (for reference)
 STUDY_PROGRAM_DATA_DIR = BASE_DIR.parent / "facial-trust-study" / "data" / "responses"
