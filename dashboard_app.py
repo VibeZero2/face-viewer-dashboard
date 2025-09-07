@@ -417,8 +417,8 @@ def dashboard():
                     
                     # Filter based on mode and incomplete toggle
                     if data_cleaner.test_mode:
-                        # Test mode: show only test sessions
-                        show_session = is_test_session
+                        # Test mode: show test sessions OR incomplete sessions if toggle is enabled
+                        show_session = is_test_session or (show_incomplete_in_production and not session_complete)
                     else:
                         # Production mode: show ALL sessions (test and real) if incomplete toggle is enabled
                         show_session = show_incomplete_in_production  # Show any sessions if toggle enabled
