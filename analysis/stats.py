@@ -388,10 +388,31 @@ class StatisticalAnalyzer:
     def get_image_summary(self) -> pd.DataFrame:
         """
         Get summary statistics for each image across versions.
+        Shows all 35 faces in the study, even if they don't have data yet.
         """
+        # Handle empty data case
+        if self.cleaned_data.empty:
+            # Return empty dataframe with all faces and all expected columns
+            all_face_ids = [f'face_{i}' for i in range(1, 36)]  # face_1 through face_35
+            return pd.DataFrame({
+                'face_id': all_face_ids,
+                'mean_trust': [0.0] * 35,  # Use 0.0 instead of np.nan
+                'half_face_avg': [0.0] * 35,  # Use 0.0 instead of np.nan
+                'full_minus_half_diff': [0.0] * 35,  # Use 0.0 instead of np.nan
+                'rating_count': [0] * 35,
+                'unique_participants': [0] * 35,
+                'std_trust': [0.0] * 35  # Use 0.0 instead of np.nan
+            })
+        
         cleaned_data = self.cleaned_data[self.cleaned_data['include_in_primary']]
         
-        # Group by face_id and version
+        # Get the actual face_id values from the data
+        actual_face_ids = sorted(cleaned_data['face_id'].unique())
+        # For display purposes, create a mapping to face_1, face_2, etc.
+        face_id_mapping = {face_id: f'face_{i+1}' for i, face_id in enumerate(actual_face_ids)}
+        all_face_ids = list(face_id_mapping.values())
+        
+        # Group by face_id and version for faces that have data
         image_summary = cleaned_data.groupby(['face_id', 'version']).agg({
             'trust_rating': ['count', 'mean', 'std'],
             'pid': 'nunique'
@@ -401,13 +422,16 @@ class StatisticalAnalyzer:
         image_summary.columns = ['rating_count', 'mean_trust', 'std_trust', 'unique_participants']
         image_summary = image_summary.reset_index()
         
+        # Map actual face_id values to display format
+        image_summary['display_face_id'] = image_summary['face_id'].map(face_id_mapping)
+        
         # Calculate difference between full face and half-face average
-        full_face_data = image_summary[image_summary['version'] == 'full'].set_index('face_id')
+        full_face_data = image_summary[image_summary['version'] == 'full'].set_index('display_face_id')
         half_face_data = image_summary[image_summary['version'].isin(['left', 'right'])]
         
         if not half_face_data.empty:
             half_face_avg = (
-                half_face_data.groupby('face_id').agg({
+                half_face_data.groupby('display_face_id').agg({
                     'mean_trust': 'mean',
                     'rating_count': 'sum',
                     'unique_participants': 'sum'
@@ -424,9 +448,59 @@ class StatisticalAnalyzer:
             comparison['rating_count'] = comparison.get('rating_count', 0).fillna(0) + comparison.get('half_rating_count', 0).fillna(0)
             comparison['unique_participants'] = comparison.get('unique_participants', 0).fillna(0) + comparison.get('half_unique_participants', 0).fillna(0)
             
-            return comparison.reset_index()
+            # Add all faces to the result, even if they don't have data
+            result = comparison.reset_index()
+            # Drop the original face_id column and rename display_face_id to face_id
+            if 'face_id' in result.columns:
+                result = result.drop(columns=['face_id'])
+            result = result.rename(columns={'display_face_id': 'face_id'})
+            
+            # Create a complete dataframe with all faces
+            complete_faces = pd.DataFrame({'face_id': all_face_ids})
+            
+            # Merge with existing data, keeping all faces
+            final_result = complete_faces.merge(result, on='face_id', how='left')
+            
+            # Fill NaN values for faces without data
+            final_result = final_result.fillna({
+                'mean_trust': 0.0,  # Use 0.0 instead of np.nan
+                'half_face_avg': 0.0,  # Use 0.0 instead of np.nan
+                'full_minus_half_diff': 0.0,  # Use 0.0 instead of np.nan
+                'rating_count': 0,
+                'unique_participants': 0,
+                'std_trust': 0.0  # Use 0.0 instead of np.nan
+            })
+            
+            return final_result
         
-        return image_summary
+        # If no half-face data, still return all faces
+        if not full_face_data.empty:
+            result = full_face_data.reset_index()
+            # Drop the original face_id column and rename display_face_id to face_id
+            if 'face_id' in result.columns:
+                result = result.drop(columns=['face_id'])
+            result = result.rename(columns={'display_face_id': 'face_id'})
+            complete_faces = pd.DataFrame({'face_id': all_face_ids})
+            final_result = complete_faces.merge(result, on='face_id', how='left')
+            final_result = final_result.fillna({
+                'mean_trust': 0.0,  # Use 0.0 instead of np.nan
+                'rating_count': 0,
+                'unique_participants': 0,
+                'std_trust': 0.0  # Use 0.0 instead of np.nan
+            })
+            return final_result
+        
+        # If no data at all, return empty dataframe with all faces and all expected columns
+        num_faces = len(all_face_ids)
+        return pd.DataFrame({
+            'face_id': all_face_ids,
+            'mean_trust': [0.0] * num_faces,  # Use 0.0 instead of np.nan
+            'half_face_avg': [0.0] * num_faces,  # Use 0.0 instead of np.nan
+            'full_minus_half_diff': [0.0] * num_faces,  # Use 0.0 instead of np.nan
+            'rating_count': [0] * num_faces,
+            'unique_participants': [0] * num_faces,
+            'std_trust': [0.0] * num_faces  # Use 0.0 instead of np.nan
+        })
     
     def run_all_analyses(self) -> Dict:
         """

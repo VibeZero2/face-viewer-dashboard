@@ -133,143 +133,150 @@
 
                     <h2 class="mb-4">Image-Level Analysis</h2>
 
-                    <!-- Summary Stats -->
-                    <div class="stat-card p-4 mb-4">
-                        <h4 class="mb-3">
-                            <i class="fas fa-chart-pie me-2 text-primary"></i>
-                            Summary Statistics
-                        </h4>
-                        <div class="row">
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <h3 class="text-primary">{{ images|length }}</h3>
-                                    <p class="text-muted">Total Images</p>
+                    {% if not images %}
+                        <!-- Empty State -->
+                        <div class="alert alert-info text-center">
+                            <i class="fas fa-info-circle fa-3x mb-3"></i>
+                            <h4>No Image Data Available</h4>
+                            <p class="mb-0">Switch to <strong>TEST MODE</strong> to view test data, or wait for production data to be collected.</p>
+                        </div>
+                    {% else %}
+                        <!-- Summary Stats -->
+                        <div class="stat-card p-4 mb-4">
+                            <h4 class="mb-3">
+                                <i class="fas fa-chart-pie me-2 text-primary"></i>
+                                Summary Statistics
+                            </h4>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-primary">{{ images|length }}</h3>
+                                        <p class="text-muted">Total Images</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <h3 class="text-success">
-                                        {% set total_ratings = images|sum(attribute='rating_count') %}
-                                        {{ total_ratings }}
-                                    </h3>
-                                    <p class="text-muted">Total Ratings</p>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-success">
+                                            {% set total_ratings = images|sum(attribute='rating_count') %}
+                                            {{ total_ratings }}
+                                        </h3>
+                                        <p class="text-muted">Total Ratings</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <h3 class="text-info">
-                                        {% set avg_trust = (images|sum(attribute='mean_trust') / images|length) if images else 0 %}
-                                        {{ "%.2f"|format(avg_trust) }}
-                                    </h3>
-                                    <p class="text-muted">Avg Trust Rating</p>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-info">
+                                            {% set avg_trust = (images|sum(attribute='mean_trust') / images|length) if images else 0 %}
+                                            {{ "%.2f"|format(avg_trust) }}
+                                        </h3>
+                                        <p class="text-muted">Avg Trust Rating</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="text-center">
-                                    <h3 class="text-warning">
-                                        {% set images_with_diff = images|selectattr('full_minus_half_diff', 'defined')|list %}
-                                        {{ images_with_diff|length }}
-                                    </h3>
-                                    <p class="text-muted">Images with Comparison</p>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-warning">
+                                            {% set images_with_diff = images|selectattr('full_minus_half_diff', 'defined')|list %}
+                                            {{ images_with_diff|length }}
+                                        </h3>
+                                        <p class="text-muted">Images with Comparison</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                                         <!-- Enhanced Face ID Summary Table -->
-                     <div class="stat-card p-4">
-                         <h4 class="mb-3">
-                             <i class="fas fa-table me-2 text-success"></i>
-                             Face ID Summary Table
-                         </h4>
-                         <div class="table-responsive">
-                             <table class="table table-hover" id="faceSummaryTable">
-                                 <thead class="table-light">
-                                     <tr>
-                                         <th style="cursor: pointer;" onclick="sortTable(0)">
-                                             Face ID <i class="fas fa-sort"></i>
-                                         </th>
-                                         <th style="cursor: pointer;" onclick="sortTable(1)">
-                                             Mean Left <i class="fas fa-sort"></i>
-                                         </th>
-                                         <th style="cursor: pointer;" onclick="sortTable(2)">
-                                             Mean Right <i class="fas fa-sort"></i>
-                                         </th>
-                                         <th style="cursor: pointer;" onclick="sortTable(3)">
-                                             Mean Full <i class="fas fa-sort"></i>
-                                         </th>
-                                         <th style="cursor: pointer;" onclick="sortTable(4)">
-                                             Trust Delta <i class="fas fa-sort"></i>
-                                         </th>
-                                         <th style="cursor: pointer;" onclick="sortTable(5)">
-                                             Total Ratings <i class="fas fa-sort"></i>
-                                         </th>
-                                         <th style="cursor: pointer;" onclick="sortTable(6)">
-                                             Std Dev <i class="fas fa-sort"></i>
-                                         </th>
-                                     </tr>
-                                 </thead>
-                                 <tbody>
-                                     {% for image in images %}
-                                     <tr>
-                                         <td><strong>{{ image.face_id }}</strong></td>
-                                         <td>
-                                             {% if image.half_face_avg is not none %}
-                                                 {{ "%.2f"|format(image.half_face_avg) }}
-                                             {% else %}
-                                                 <span class="text-muted">N/A</span>
-                                             {% endif %}
-                                         </td>
-                                         <td>
-                                             {% if image.half_face_avg is not none %}
-                                                 {{ "%.2f"|format(image.half_face_avg) }}
-                                             {% else %}
-                                                 <span class="text-muted">N/A</span>
-                                             {% endif %}
-                                         </td>
-                                         <td>
-                                             {% if image.mean_trust is not none %}
-                                                 {{ "%.2f"|format(image.mean_trust) }}
-                                             {% else %}
-                                                 <span class="text-muted">N/A</span>
-                                             {% endif %}
-                                         </td>
-                                         <td>
-                                             {% if image.full_minus_half_diff is not none %}
-                                                 {% if image.full_minus_half_diff > 0 %}
-                                                     <span class="difference-positive">+{{ "%.2f"|format(image.full_minus_half_diff) }}</span>
-                                                 {% elif image.full_minus_half_diff < 0 %}
-                                                     <span class="difference-negative">{{ "%.2f"|format(image.full_minus_half_diff) }}</span>
-                                                 {% else %}
-                                                     <span class="difference-zero">{{ "%.2f"|format(image.full_minus_half_diff) }}</span>
-                                                 {% endif %}
-                                             {% else %}
-                                                 <span class="text-muted">N/A</span>
-                                             {% endif %}
-                                         </td>
-                                         <td><span class="badge bg-primary">{{ image.rating_count }}</span></td>
-                                         <td>
-                                             {% if image.std_trust is not none %}
-                                                 {{ "%.2f"|format(image.std_trust) }}
-                                             {% else %}
-                                                 <span class="text-muted">N/A</span>
-                                             {% endif %}
-                                         </td>
-                                     </tr>
-                                     {% endfor %}
-                                 </tbody>
-                             </table>
-                         </div>
-                     </div>
+                        <!-- Enhanced Face ID Summary Table -->
+                        <div class="stat-card p-4">
+                            <h4 class="mb-3">
+                                <i class="fas fa-table me-2 text-success"></i>
+                                Face ID Summary Table
+                            </h4>
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="faceSummaryTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="cursor: pointer;" onclick="sortTable(0)">
+                                                Face ID <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th style="cursor: pointer;" onclick="sortTable(1)">
+                                                Mean Left <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th style="cursor: pointer;" onclick="sortTable(2)">
+                                                Mean Right <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th style="cursor: pointer;" onclick="sortTable(3)">
+                                                Mean Full <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th style="cursor: pointer;" onclick="sortTable(4)">
+                                                Trust Delta <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th style="cursor: pointer;" onclick="sortTable(5)">
+                                                Total Ratings <i class="fas fa-sort"></i>
+                                            </th>
+                                            <th style="cursor: pointer;" onclick="sortTable(6)">
+                                                Std Dev <i class="fas fa-sort"></i>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for image in images %}
+                                        <tr>
+                                            <td><strong>{{ image.face_id }}</strong></td>
+                                            <td>
+                                                {% if image.half_face_avg is not none %}
+                                                    {{ "%.2f"|format(image.half_face_avg) }}
+                                                {% else %}
+                                                    <span class="text-muted">N/A</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if image.half_face_avg is not none %}
+                                                    {{ "%.2f"|format(image.half_face_avg) }}
+                                                {% else %}
+                                                    <span class="text-muted">N/A</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if image.mean_trust is not none %}
+                                                    {{ "%.2f"|format(image.mean_trust) }}
+                                                {% else %}
+                                                    <span class="text-muted">N/A</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if image.full_minus_half_diff is not none %}
+                                                    {% if image.full_minus_half_diff > 0 %}
+                                                        <span class="difference-positive">+{{ "%.2f"|format(image.full_minus_half_diff) }}</span>
+                                                    {% elif image.full_minus_half_diff < 0 %}
+                                                        <span class="difference-negative">{{ "%.2f"|format(image.full_minus_half_diff) }}</span>
+                                                    {% else %}
+                                                        <span class="difference-zero">{{ "%.2f"|format(image.full_minus_half_diff) }}</span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="text-muted">N/A</span>
+                                                {% endif %}
+                                            </td>
+                                            <td><span class="badge bg-primary">{{ image.rating_count }}</span></td>
+                                            <td>
+                                                {% if image.std_trust is not none %}
+                                                    {{ "%.2f"|format(image.std_trust) }}
+                                                {% else %}
+                                                    <span class="text-muted">N/A</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
 
-                     <!-- Individual Image Statistics -->
-                     <div class="stat-card p-4">
-                         <h4 class="mb-3">
-                             <i class="fas fa-images me-2 text-success"></i>
-                             Individual Image Statistics
-                         </h4>
-                        
-                        {% if images %}
+                        <!-- Individual Image Statistics -->
+                        <div class="stat-card p-4">
+                            <h4 class="mb-3">
+                                <i class="fas fa-images me-2 text-success"></i>
+                                Individual Image Statistics
+                            </h4>
+                            
                             <div class="table-responsive">
                                 <table class="table table-hover" id="imagesTable">
                                     <thead class="table-light">
@@ -343,118 +350,109 @@
                                     </tbody>
                                 </table>
                             </div>
-                        {% else %}
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                No image data available.
-                            </div>
-                        {% endif %}
-                    </div>
+                        </div>
 
-                                         <!-- Charts Section -->
-                     {% if images %}
-                     <div class="stat-card p-4 mb-4">
-                         <h4 class="mb-3">
-                             <i class="fas fa-chart-line me-2 text-info"></i>
-                             Visual Analysis
-                         </h4>
-                         <div class="row">
-                             <div class="col-md-6">
-                                 <div class="card">
-                                     <div class="card-header">
-                                         <h6><i class="fas fa-chart-bar me-2"></i>Mean Trust by Face ID</h6>
-                                     </div>
-                                     <div class="card-body">
-                                         <canvas id="faceTrustChart" width="300" height="200"></canvas>
-                                     </div>
-                                 </div>
-                             </div>
-                             <div class="col-md-6">
-                                 <div class="card">
-                                     <div class="card-header">
-                                         <h6><i class="fas fa-chart-line me-2"></i>Trust Shift: Left → Right → Full</h6>
-                                     </div>
-                                     <div class="card-body">
-                                         <canvas id="trustShiftChart" width="300" height="200"></canvas>
-                                     </div>
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-                     {% endif %}
-
-                     <!-- Detailed Analysis -->
-                     {% if images %}
-                     <div class="stat-card p-4">
-                         <h4 class="mb-3">
-                             <i class="fas fa-chart-bar me-2 text-info"></i>
-                             Detailed Analysis
-                         </h4>
-                        
-                        <!-- Trust Rating Distribution -->
-                        <div class="row mb-4">
-                            <div class="col-md-6">
-                                <h6>Trust Rating Distribution</h6>
-                                <div class="image-row">
-                                    {% set trust_ratings = images|map(attribute='mean_trust')|list %}
-                                    {% set min_trust = trust_ratings|min %}
-                                    {% set max_trust = trust_ratings|max %}
-                                    {% set avg_trust = (trust_ratings|sum / trust_ratings|length) %}
-                                    
-                                    <p><strong>Range:</strong> {{ "%.2f"|format(min_trust) }} - {{ "%.2f"|format(max_trust) }}</p>
-                                    <p><strong>Mean:</strong> {{ "%.2f"|format(avg_trust) }}</p>
-                                    <p><strong>Images above mean:</strong> {{ (trust_ratings|select('>', avg_trust)|list)|length }}</p>
-                                    <p><strong>Images below mean:</strong> {{ (trust_ratings|select('<', avg_trust)|list)|length }}</p>
+                        <!-- Charts Section -->
+                        <div class="stat-card p-4 mb-4">
+                            <h4 class="mb-3">
+                                <i class="fas fa-chart-line me-2 text-info"></i>
+                                Visual Analysis
+                            </h4>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6><i class="fas fa-chart-bar me-2"></i>Mean Trust by Face ID</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <canvas id="faceTrustChart" width="300" height="200"></canvas>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6">
-                                <h6>Full vs Half Face Comparison</h6>
-                                <div class="image-row">
-                                    {% set differences = images|selectattr('full_minus_half_diff', 'defined')|map(attribute='full_minus_half_diff')|list %}
-                                    {% if differences %}
-                                        {% set positive_diff = (differences|select('>', 0)|list)|length %}
-                                        {% set negative_diff = (differences|select('<', 0)|list)|length %}
-                                        {% set zero_diff = (differences|select('==', 0)|list)|length %}
-                                        
-                                        <p><strong>Full > Half:</strong> {{ positive_diff }} images</p>
-                                        <p><strong>Full < Half:</strong> {{ negative_diff }} images</p>
-                                        <p><strong>No difference:</strong> {{ zero_diff }} images</p>
-                                        <p><strong>Mean difference:</strong> {{ "%.2f"|format(differences|sum / differences|length) }}</p>
-                                    {% else %}
-                                        <p class="text-muted">No comparison data available</p>
-                                    {% endif %}
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h6><i class="fas fa-chart-line me-2"></i>Trust Shift: Left → Right → Full</h6>
+                                        </div>
+                                        <div class="card-body">
+                                            <canvas id="trustShiftChart" width="300" height="200"></canvas>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Top and Bottom Images -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <h6>Highest Trust Ratings</h6>
-                                <div class="image-row">
-                                    {% set sorted_by_trust = images|sort(attribute='mean_trust', reverse=true) %}
-                                    {% for image in sorted_by_trust[:5] %}
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span>{{ image.face_id }}</span>
-                                            <span class="badge bg-success">{{ "%.2f"|format(image.mean_trust) }}</span>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <h6>Lowest Trust Ratings</h6>
-                                <div class="image-row">
-                                    {% set sorted_by_trust = images|sort(attribute='mean_trust') %}
-                                    {% for image in sorted_by_trust[:5] %}
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span>{{ image.face_id }}</span>
-                                            <span class="badge bg-danger">{{ "%.2f"|format(image.mean_trust) }}</span>
-                                        </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                        <!-- Detailed Analysis -->
+                        <div class="stat-card p-4">
+                            <h4 class="mb-3">
+                                <i class="fas fa-chart-bar me-2 text-info"></i>
+                                Detailed Analysis
+                            </h4>
+                           
+                           <!-- Trust Rating Distribution -->
+                           <div class="row mb-4">
+                               <div class="col-md-6">
+                                   <h6>Trust Rating Distribution</h6>
+                                   <div class="image-row">
+                                       {% set trust_ratings = images|map(attribute='mean_trust')|list %}
+                                       {% set min_trust = trust_ratings|min %}
+                                       {% set max_trust = trust_ratings|max %}
+                                       {% set avg_trust = (trust_ratings|sum / trust_ratings|length) %}
+                                       
+                                       <p><strong>Range:</strong> {{ "%.2f"|format(min_trust) }} - {{ "%.2f"|format(max_trust) }}</p>
+                                       <p><strong>Mean:</strong> {{ "%.2f"|format(avg_trust) }}</p>
+                                       <p><strong>Images above mean:</strong> {{ (trust_ratings|select('>', avg_trust)|list)|length }}</p>
+                                       <p><strong>Images below mean:</strong> {{ (trust_ratings|select('<', avg_trust)|list)|length }}</p>
+                                   </div>
+                               </div>
+                               <div class="col-md-6">
+                                   <h6>Full vs Half Face Comparison</h6>
+                                   <div class="image-row">
+                                       {% set differences = images|selectattr('full_minus_half_diff', 'defined')|map(attribute='full_minus_half_diff')|list %}
+                                       {% if differences %}
+                                           {% set positive_diff = (differences|select('>', 0)|list)|length %}
+                                           {% set negative_diff = (differences|select('<', 0)|list)|length %}
+                                           {% set zero_diff = (differences|select('==', 0)|list)|length %}
+                                           
+                                           <p><strong>Full > Half:</strong> {{ positive_diff }} images</p>
+                                           <p><strong>Full < Half:</strong> {{ negative_diff }} images</p>
+                                           <p><strong>No difference:</strong> {{ zero_diff }} images</p>
+                                           <p><strong>Mean difference:</strong> {{ "%.2f"|format(differences|sum / differences|length) }}</p>
+                                       {% else %}
+                                           <p class="text-muted">No comparison data available</p>
+                                       {% endif %}
+                                   </div>
+                               </div>
+                           </div>
+
+                           <!-- Top and Bottom Images -->
+                           <div class="row">
+                               <div class="col-md-6">
+                                   <h6>Highest Trust Ratings</h6>
+                                   <div class="image-row">
+                                       {% set sorted_by_trust = images|sort(attribute='mean_trust', reverse=true) %}
+                                       {% for image in sorted_by_trust[:5] %}
+                                           <div class="d-flex justify-content-between align-items-center mb-2">
+                                               <span>{{ image.face_id }}</span>
+                                               <span class="badge bg-success">{{ "%.2f"|format(image.mean_trust) }}</span>
+                                           </div>
+                                       {% endfor %}
+                                   </div>
+                               </div>
+                               <div class="col-md-6">
+                                   <h6>Lowest Trust Ratings</h6>
+                                   <div class="image-row">
+                                       {% set sorted_by_trust = images|sort(attribute='mean_trust') %}
+                                       {% for image in sorted_by_trust[:5] %}
+                                           <div class="d-flex justify-content-between align-items-center mb-2">
+                                               <span>{{ image.face_id }}</span>
+                                               <span class="badge bg-danger">{{ "%.2f"|format(image.mean_trust) }}</span>
+                                           </div>
+                                       {% endfor %}
+                                   </div>
+                               </div>
+                           </div>
+                       </div>
                     {% endif %}
                 </div>
             </div>

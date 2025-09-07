@@ -27,56 +27,49 @@ class DataCleaner:
         Set test_mode=True to include test files.
         """
         csv_files = list(self.data_dir.glob("*.csv"))
+        print(f"🔍 Found {len(csv_files)} CSV files in {self.data_dir}")
+        print(f"📁 Files: {[f.name for f in csv_files]}")
+        
         if not csv_files:
             raise FileNotFoundError(f"No CSV files found in {self.data_dir}")
         
         # Filter files based on mode
         if self.test_mode:
-            # Test mode: include all files
-            filtered_files = csv_files
-            logger.info("TEST MODE: Loading all CSV files including test data")
-        else:
-            # Production mode: include real study data and study program files
-            # Study program files: timestamped files (e.g., test789_20250725_123758.csv)
-            # Real participant files: participant_*.csv
-            # Prolific files: PROLIFIC_*.csv
+            # Test mode: include ONLY test files
             filtered_files = []
             excluded_files = []
             
             for file_path in csv_files:
                 file_name = file_path.name
                 
-                # Exclude test files first (regardless of other patterns)
+                # Include only test files (exclude backup files)
                 if (file_name.startswith('test_') or 
                     file_name.startswith('test_participant') or
                     'test_statistical_validation' in file_name or
                     file_name.startswith('PROLIFIC_TEST_') or
                     file_name == 'test789.csv' or
                     file_name == 'test123.csv' or
-                    file_name == 'test456.csv'):
-                    excluded_files.append(file_name)
-                    continue
-                
-                # Include real participant files
-                if file_name.startswith('participant_'):
-                    filtered_files.append(file_path)
-                # Include study program files (timestamped files that are NOT test files)
-                elif '_2025' in file_name and not file_name.startswith('test_'):
-                    filtered_files.append(file_path)
-                # Include numeric participant IDs (like 200.csv) - these are real study data
-                elif file_name.replace('.csv', '').isdigit():
-                    filtered_files.append(file_path)
-                # Include other files that look like real study data
-                elif not file_name.startswith('test_'):
+                    file_name == 'test456.csv' or
+                    file_name == 'test_participants_combined.csv') and not file_name.endswith('_backup.csv'):
                     filtered_files.append(file_path)
                 else:
                     excluded_files.append(file_name)
             
             if excluded_files:
-                logger.info(f"PRODUCTION MODE: Excluded test files: {excluded_files}")
+                logger.info(f"TEST MODE: Excluded production files: {excluded_files}")
             
             if not filtered_files:
-                raise FileNotFoundError(f"No real study data files found in {self.data_dir}")
+                raise FileNotFoundError(f"No test data files found in {self.data_dir}")
+            
+            logger.info("TEST MODE: Loading only test CSV files")
+        else:
+            # Production mode: show NO files at all (empty state)
+            filtered_files = []
+            excluded_files = [f.name for f in csv_files]
+            
+            logger.info(f"PRODUCTION MODE: Excluded all files (showing empty state): {excluded_files}")
+            
+            # Don't raise error - allow empty state in production mode
         
         all_data = []
         real_participants = 0
@@ -85,6 +78,7 @@ class DataCleaner:
         for file_path in filtered_files:
             try:
                 df = pd.read_csv(file_path)
+                print(f"📊 Loaded {len(df)} rows from {file_path.name}")
                 
                 # Add file metadata
                 df['source_file'] = file_path.name
@@ -110,7 +104,13 @@ class DataCleaner:
                 continue
         
         if not all_data:
-            raise ValueError("No valid CSV files could be loaded")
+            if self.test_mode:
+                raise ValueError("No valid CSV files could be loaded")
+            else:
+                # Production mode: allow empty state
+                self.raw_data = pd.DataFrame()
+                logger.info("PRODUCTION MODE: No files loaded (empty state)")
+                return self.raw_data
         
         # Merge all dataframes
         self.raw_data = pd.concat(all_data, ignore_index=True)
@@ -130,26 +130,59 @@ class DataCleaner:
         if self.raw_data is None:
             return {"status": "No data loaded"}
         
-        # Count real participants (including study program files)
-        real_files = []
-        test_files = []
+        # Get all files in the directory to show what's available
+        csv_files = list(self.data_dir.glob("*.csv"))
+        all_real_files = []
+        all_test_files = []
         
-        for file_name in self.raw_data['source_file'].unique():
-            if (file_name.startswith('participant_') or 
-                ('_2025' in file_name and not file_name.startswith('test_')) or
-                file_name.replace('.csv', '').isdigit()):
-                real_files.append(file_name)
+        for file_path in csv_files:
+            file_name = file_path.name
+            if (file_name.startswith('test_') or 
+                file_name.startswith('test_participant') or
+                'test_statistical_validation' in file_name or
+                file_name.startswith('PROLIFIC_TEST_') or
+                file_name == 'test789.csv' or
+                file_name == 'test123.csv' or
+                file_name == 'test456.csv' or
+                file_name == 'test_participants_combined.csv'):
+                all_test_files.append(file_name)
             else:
-                test_files.append(file_name)
+                all_real_files.append(file_name)
         
-        return {
-            "mode": "TEST" if self.test_mode else "PRODUCTION",
-            "total_rows": len(self.raw_data),
-            "real_participants": len(real_files),
-            "test_files": len(test_files),
-            "real_files": real_files,
-            "test_files_list": test_files
-        }
+        # Count what's actually loaded
+        if (self.raw_data is None or 
+            len(self.raw_data) == 0 or 
+            not hasattr(self.raw_data, 'columns') or 
+            'source_file' not in self.raw_data.columns):
+            # Empty data - no files loaded
+            loaded_files = []
+            loaded_real_files = []
+            loaded_test_files = []
+        else:
+            loaded_files = self.raw_data['source_file'].unique()
+            loaded_real_files = [f for f in loaded_files if f in all_real_files]
+            loaded_test_files = [f for f in loaded_files if f in all_test_files]
+        
+        if self.test_mode:
+            # In test mode, we show test files as "loaded" and real files as "excluded"
+            return {
+                "mode": "TEST",
+                "total_rows": len(self.raw_data),
+                "real_participants": len(loaded_test_files),  # Test files are the "participants" in test mode
+                "test_files": len(loaded_real_files),  # Real files are "excluded" in test mode
+                "real_files": loaded_test_files,  # In test mode, "real_files" means the test files we're showing
+                "test_files_list": loaded_real_files  # Real files are excluded in test mode
+            }
+        else:
+            # In production mode, we show real files as "loaded" and test files as "excluded"
+            return {
+                "mode": "PRODUCTION",
+                "total_rows": len(self.raw_data),
+                "real_participants": len(loaded_real_files),  # Real files are the "participants" in production mode
+                "test_files": len(loaded_test_files),  # Test files are "excluded" in production mode
+                "real_files": loaded_real_files,  # In production mode, "real_files" means the real files we're showing
+                "test_files_list": loaded_test_files  # Test files are excluded in production mode
+            }
     
     def standardize_data(self) -> pd.DataFrame:
         """
@@ -215,6 +248,9 @@ class DataCleaner:
         
         # Handle face_id conversion for study program format
         if 'face_id' in df.columns:
+            # Convert face_id to string first to handle both string and numeric formats
+            df['face_id'] = df['face_id'].astype(str)
+            
             # Study program uses 'face_1', 'face_2', etc.
             # Handle "Face ID (25)" format from 200.csv
             face_id_pattern = df['face_id'].str.match(r'Face ID \((\d+)\)', na=False)
@@ -222,6 +258,13 @@ class DataCleaner:
                 # Extract the number from "Face ID (25)" and convert to "face_25"
                 df.loc[face_id_pattern, 'face_id'] = 'face_' + df.loc[face_id_pattern, 'face_id'].str.extract(r'Face ID \((\d+)\)')[0]
                 logger.info("Converted 'Face ID (X)' format to study program format")
+            
+            # Handle simple numeric face IDs like "1", "2", "3" from test data
+            numeric_pattern = df['face_id'].str.match(r'^\d+$', na=False)
+            if numeric_pattern.any():
+                # Convert "1" to "face_1", "2" to "face_2", etc.
+                df.loc[numeric_pattern, 'face_id'] = 'face_' + df.loc[numeric_pattern, 'face_id']
+                logger.info("Converted numeric face IDs to study program format")
         
         # Ensure version exists and has data (study program uses 'version')
         if 'faceversion' in df.columns and 'version' in df.columns:

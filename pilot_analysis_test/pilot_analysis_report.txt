@@ -1,0 +1,113 @@
+FACIAL TRUST STUDY - PILOT ANALYSIS REPORT
+==================================================
+
+Generated on: 2025-09-07 13:40:58
+
+DATA SUMMARY
+--------------------
+total_responses: 5828
+unique_participants: 4
+unique_images: 13
+question_types: {'trust_rating': 538, 'masc_choice': 538, 'fem_choice': 538, 'trust_q2': 538, 'trust_q3': 538, 'pers_q1': 538, 'pers_q2': 538, 'pers_q3': 538, 'pers_q4': 538, 'pers_q5': 538, 'emotion_rating': 448}
+face_views: {'full': 2324, 'left': 1752, 'right': 1752}
+responses_per_participant: {'count': 4.0, 'mean': 1457.0, 'std': 2314.0, 'min': 300.0, '25%': 300.0, '50%': 300.0, '75%': 1457.0, 'max': 4928.0}
+responses_per_image: {'count': 13.0, 'mean': 448.3076923076923, 'std': 371.5109654315703, 'min': 33.0, '25%': 180.0, '50%': 308.0, '75%': 671.0, 'max': 1188.0}
+date_range: {'earliest': Timestamp('2025-07-25 10:11:50.090948'), 'latest': Timestamp('2025-09-07 05:27:39.891116')}
+
+DESCRIPTIVE STATISTICS
+-------------------------
+
+LEFT:
+  n: 162.000
+  mean: 4.944
+  std: 2.581
+  median: 5.000
+  min: 1.000
+  max: 9.000
+  q25: 4.000
+  q75: 7.000
+  skewness: 0.216
+  kurtosis: -0.817
+
+RIGHT:
+  n: 162.000
+  mean: 3.327
+  std: 1.649
+  median: 3.500
+  min: 1.000
+  max: 7.000
+  q25: 2.000
+  q75: 4.000
+  skewness: 0.086
+  kurtosis: -0.568
+
+FULL:
+  n: 214.000
+  mean: 4.846
+  std: 1.781
+  median: 5.000
+  min: 1.000
+  max: 9.000
+  q25: 3.000
+  q75: 6.000
+  skewness: -0.036
+  kurtosis: -0.355
+
+OVERALL:
+  n: 538.000
+  mean: 4.418
+  std: 2.142
+  median: 4.000
+  min: 1.000
+  max: 9.000
+  q25: 3.000
+  q75: 6.000
+  skewness: 0.298
+  kurtosis: -0.266
+
+CORRELATIONS
+---------------
+left_right: r = -0.375, p = 0.094, n = 21
+left_full: r = -0.137, p = 0.555, n = 21
+right_full: r = -0.274, p = 0.229, n = 21
+
+REPEATED MEASURES ANOVA
+-------------------------
+F-statistic: 0.920
+p-value: 0.404
+Eta-squared: 0.030
+Face views: ['left', 'right', 'full']
+Group means: ['4.716', '4.214', '4.037']
+Group stds: ['1.673', '1.438', '1.795']
+Group ns: [21, 21, 21]
+
+Pairwise t-tests:
+  left_vs_right: t = 0.869, p = 0.395
+  left_vs_full: t = 1.352, p = 0.192
+  right_vs_full: t = 0.336, p = 0.740
+
+INTRACLASS CORRELATION (ICC)
+------------------------------
+ICC(2,1): -0.060
+ICC(2,k): -0.205
+n_subjects: 23
+n_raters: 3
+
+EFFECT SIZES (COHEN'S D)
+-------------------------
+left_vs_right: d = 0.190, n = 21
+left_vs_full: d = 0.290, n = 21
+right_vs_full: d = 0.097, n = 21
+
+INTERPRETATION
+---------------
+Effect size guidelines (Cohen's d):
+  Small: 0.2
+  Medium: 0.5
+  Large: 0.8
+
+ICC interpretation:
+  < 0.5: Poor reliability
+  0.5-0.75: Moderate reliability
+  0.75-0.9: Good reliability
+  > 0.9: Excellent reliability

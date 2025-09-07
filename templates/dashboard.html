@@ -155,14 +155,14 @@
                                 Welcome, {{ session.username }}!
                             </span>
                             <form method="post" action="{{ url_for('toggle_mode') }}" style="display: inline;">
-                                <button type="submit" class="btn btn-outline-{{ 'warning' if data_summary and data_summary.mode == 'PRODUCTION' else 'success' }} btn-sm">
-                                    <i class="fas fa-{{ 'flask' if data_summary and data_summary.mode == 'PRODUCTION' else 'shield-alt' }} me-1"></i>
-                                    Switch to {{ 'TEST' if data_summary and data_summary.mode == 'PRODUCTION' else 'PRODUCTION' }} Mode
+                                <button type="submit" class="btn btn-outline-{{ 'warning' if data_summary and data_summary.get('mode') == 'PRODUCTION' else 'success' }} btn-sm">
+                                    <i class="fas fa-{{ 'flask' if data_summary and data_summary.get('mode') == 'PRODUCTION' else 'shield-alt' }} me-1"></i>
+                                    Switch to {{ 'TEST' if data_summary and data_summary.get('mode') == 'PRODUCTION' else 'PRODUCTION' }} Mode
                                 </button>
                             </form>
                             
                             <!-- Show Incomplete Sessions Toggle (Production Mode Only) -->
-                            {% if data_summary and data_summary.mode == 'PRODUCTION' %}
+                            {% if data_summary and data_summary.get('mode') == 'PRODUCTION' %}
                             <form method="post" action="{{ url_for('toggle_incomplete') }}" style="display: inline;" class="ms-2">
                                 <button type="submit" class="btn btn-outline-{{ 'primary' if show_incomplete_in_production else 'secondary' }} btn-sm" 
                                         title="{{ 'Hide' if show_incomplete_in_production else 'Show' }} incomplete sessions">
@@ -196,19 +196,19 @@
                             
                             <!-- Data Mode Indicator -->
                             {% if data_summary %}
-                            <div class="alert alert-{{ 'success' if data_summary.mode == 'PRODUCTION' else 'warning' }} mb-3">
+                            <div class="alert alert-{{ 'success' if data_summary.get('mode') == 'PRODUCTION' else 'warning' }} mb-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
                                         <strong>
-                                            <i class="fas fa-{{ 'shield-alt' if data_summary.mode == 'PRODUCTION' else 'flask' }} me-2"></i>
-                                            {{ data_summary.mode }} MODE
+                                            <i class="fas fa-{{ 'shield-alt' if data_summary.get('mode') == 'PRODUCTION' else 'flask' }} me-2"></i>
+                                            {{ data_summary.get('mode', 'UNKNOWN') }} MODE
                                         </strong>
                                         <br>
                                         <small class="text-muted">
-                                            Data files: {{ data_summary.real_participants }} files loaded | {{ dashboard_stats.cleaned_trials if dashboard_stats else data_summary.total_rows }} trials
-                                            {% if data_summary.test_files > 0 %}
-                                                | {{ data_summary.test_files }} test files excluded
-                                            {% endif %}
+                                            <span id="data-files-info">Data files: {{ data_summary.get('real_participants', 0) }} files loaded | {{ data_summary.get('total_rows', 0) }} trials
+                                            {% if data_summary.get('test_files', 0) > 0 %}
+                                                | {{ data_summary.get('test_files', 0) }} test files excluded
+                                            {% endif %}</span>
                                             <br>
                                             <span class="text-info">
                                                 <i class="fas fa-info-circle me-1"></i>
@@ -216,7 +216,7 @@
                                             </span>
                                         </small>
                                     </div>
-                                    {% if data_summary.mode == 'PRODUCTION' %}
+                                    {% if data_summary.get('mode') == 'PRODUCTION' %}
                                     <span class="badge bg-success">IRB-Approved Data Only</span>
                                     {% else %}
                                     <span class="badge bg-warning">Test Data Included</span>
@@ -298,6 +298,7 @@
                     </div>
 
                     <!-- Trust Ratings by Version -->
+                    {% if descriptive_stats and not descriptive_stats.get('error') %}
                     <div class="row mb-4">
                         <div class="col-12">
                             <div class="chart-container">
@@ -333,6 +334,17 @@
                             </div>
                         </div>
                     </div>
+                    {% else %}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="alert alert-info text-center">
+                                <i class="fas fa-info-circle fa-2x mb-3"></i>
+                                <h5>No Statistical Data Available</h5>
+                                <p class="mb-0">Switch to <strong>TEST MODE</strong> to view statistical analysis, or wait for production data to be collected.</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
 
                     <!-- Exclusion Summary -->
                     {% if exclusion_summary and exclusion_summary.session_level.exclusion_reasons %}
@@ -632,6 +644,7 @@
                         const totalResponses = document.getElementById('total-responses');
                         const avgTrust = document.getElementById('avg-trust-rating');
                         const stdTrust = document.getElementById('std-trust-rating');
+                        const dataFilesInfo = document.getElementById('data-files-info');
                         
                         if (totalParticipants && data.exclusion_summary.session_level) {
                             totalParticipants.textContent = data.exclusion_summary.session_level.total_sessions || '0';
@@ -640,10 +653,20 @@
                             totalResponses.textContent = data.exclusion_summary.total_raw || '0';
                         }
                         if (avgTrust && data.dashboard_stats) {
-                            avgTrust.textContent = data.dashboard_stats.avg_trust_rating ? data.dashboard_stats.avg_trust_rating.toFixed(1) : '0';
+                            avgTrust.textContent = data.dashboard_stats.avg_trust_rating ? data.dashboard_stats.avg_trust_rating.toFixed(1) : '0';        
                         }
                         if (stdTrust && data.dashboard_stats) {
-                            stdTrust.textContent = data.dashboard_stats.std_trust_rating ? data.dashboard_stats.std_trust_rating.toFixed(2) : '0';
+                            stdTrust.textContent = data.dashboard_stats.std_trust_rating ? data.dashboard_stats.std_trust_rating.toFixed(2) : '0';        
+                        }
+                        if (dataFilesInfo && data.data_summary) {
+                            let filesText = `Data files: ${data.data_summary.real_participants} files loaded | ${data.data_summary.total_rows} trials`;
+                            if (data.data_summary.test_files > 0) {
+                                filesText += ` | ${data.data_summary.test_files} test files excluded`;
+                            }
+                            dataFilesInfo.textContent = filesText;
+                            console.log('Updated data-files-info:', filesText);
+                        } else {
+                            console.log('dataFilesInfo:', dataFilesInfo, 'data.data_summary:', data.data_summary);
                         }
                     }
                 })

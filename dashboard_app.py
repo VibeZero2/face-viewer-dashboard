@@ -49,7 +49,9 @@ class DataFileHandler(FileSystemEventHandler):
     
     def on_created(self, event):
         if not event.is_directory and event.src_path.endswith('.csv'):
-            print(f"🆕 New data file detected: {event.src_path}")
+            filename = Path(event.src_path).name
+            print(f"🆕 New data file detected: {filename}")
+            print(f"   📍 Full path: {event.src_path}")
             self.dashboard_app.trigger_data_refresh()
     
     def on_modified(self, event):
@@ -58,7 +60,9 @@ class DataFileHandler(FileSystemEventHandler):
             current_time = time.time()
             if (event.src_path not in self.last_modified or 
                 current_time - self.last_modified[event.src_path] > 1):
-                print(f"📝 Data file modified: {event.src_path}")
+                filename = Path(event.src_path).name
+                print(f"📝 Data file modified: {filename}")
+                print(f"   📍 Full path: {event.src_path}")
                 self.last_modified[event.src_path] = current_time
                 self.dashboard_app.trigger_data_refresh()
 
@@ -80,23 +84,58 @@ def start_file_watcher():
         print(f"❌ Error starting file watcher: {e}")
         return None
 
-def initialize_data(test_mode=False):
+def is_data_available():
+    """Check if data is available and initialized."""
+    return data_cleaner is not None and data_filter is not None and statistical_analyzer is not None
+
+def initialize_data(test_mode=False, force_mode=False):
     """Initialize data processing components."""
     global data_cleaner, statistical_analyzer, data_filter, last_data_refresh
     
     try:
-        # Use production mode by default (only real study data)
+        # Check what data files are available
+        data_dir = Path("data/responses")
+        if data_dir.exists():
+            csv_files = list(data_dir.glob("*.csv"))
+            test_files = [f for f in csv_files if any(pattern in f.name for pattern in 
+                        ['test_', 'test_participant', 'test_statistical_validation', 'PROLIFIC_TEST_', 'test789.csv', 'test123.csv', 'test456.csv', 'test_participants_combined.csv'])]
+            real_files = [f for f in csv_files if f not in test_files]
+            
+            # Auto-detect mode: if only test files exist, use test mode
+            # But only if not forcing a specific mode (e.g., from manual toggle)
+            if not force_mode and not real_files and test_files:
+                print("Auto-detected: Only test files available, switching to TEST MODE")
+                test_mode = True
+            elif not csv_files:
+                raise FileNotFoundError("No CSV files found in data/responses")
+        
+        # Use detected or specified mode
         data_cleaner = DataCleaner("data/responses", test_mode=test_mode)
         data_cleaner.load_data()
         data_cleaner.standardize_data()
         data_cleaner.apply_exclusion_rules()
         
-        statistical_analyzer = StatisticalAnalyzer(data_cleaner)
-        data_filter = DataFilter(data_cleaner)
+        # Only initialize statistical analyzer if we have data
+        if len(data_cleaner.raw_data) > 0:
+            statistical_analyzer = StatisticalAnalyzer(data_cleaner)
+            data_filter = DataFilter(data_cleaner)
+        else:
+            statistical_analyzer = None
+            data_filter = None
         
         last_data_refresh = datetime.now()
-        print("Data initialized successfully")
+        mode_name = "TEST" if test_mode else "PRODUCTION"
+        print(f"Data initialized successfully in {mode_name} mode")
         return True
+    except FileNotFoundError as e:
+        print(f"No data files found: {e}")
+        print("Dashboard will start in empty state - upload data to begin analysis")
+        # Initialize with empty data structures
+        data_cleaner = None
+        statistical_analyzer = None
+        data_filter = None
+        last_data_refresh = datetime.now()
+        return True  # Return True to allow dashboard to start
     except Exception as e:
         print(f"Error initializing data: {e}")
         return False
@@ -107,9 +146,23 @@ def trigger_data_refresh():
     
     try:
         print("🔄 Triggering data refresh...")
-        if initialize_data():
+        
+        # Log current files before refresh
+        data_dir = Path("data/responses")
+        if data_dir.exists():
+            current_files = list(data_dir.glob("*.csv"))
+            print(f"📁 Current files in data/responses/: {[f.name for f in current_files]}")
+        
+        if initialize_data(force_mode=False):
             last_data_refresh = datetime.now()
             print("✅ Data refresh completed")
+            
+            # Log data after refresh
+            if data_cleaner and hasattr(data_cleaner, 'data') and data_cleaner.data is not None:
+                print(f"📊 Total responses loaded: {len(data_cleaner.data)}")
+                if len(data_cleaner.data) > 0:
+                    participants = data_cleaner.data['pid'].unique() if 'pid' in data_cleaner.data.columns else []
+                    print(f"👥 Participants: {list(participants)}")
         else:
             print("❌ Data refresh failed")
     except Exception as e:
@@ -117,11 +170,11 @@ def trigger_data_refresh():
 
 # Start file watcher in a separate thread
 file_observer = None
-if not app.config['DEBUG']:  # Only in production mode
-    file_observer = start_file_watcher()
+# Enable file watcher in both debug and production modes for real-time updates
+file_observer = start_file_watcher()
 
 # Initialize data on startup
-initialize_data()
+initialize_data(force_mode=False)
 
 # Simple file-based user authentication
 import json
@@ -226,15 +279,26 @@ def dashboard():
     """Main dashboard page."""
     global data_cleaner, statistical_analyzer, data_filter
     
-    if data_cleaner is None or statistical_analyzer is None or data_filter is None:
-        if not initialize_data():
+    if not is_data_available():
+        if not initialize_data(force_mode=False):
             flash('Error loading data. Please check the data directory.', 'error')
             return render_template('error.html', message="Data initialization failed")
     
     try:
         # Get overview statistics
+        if not is_data_available():
+            flash('No data available. Please upload data files or check data directory.', 'warning')
+            return render_template('dashboard.html',
+                             exclusion_summary={},
+                             descriptive_stats={},
+                             dashboard_stats={},
+                             data_summary={'mode': 'NO_DATA'},
+                             available_filters={},
+                             data_files=[],
+                             show_incomplete_in_production=show_incomplete_in_production)
+        
         exclusion_summary = data_cleaner.get_exclusion_summary()
-        descriptive_stats = statistical_analyzer.get_descriptive_stats()
+        descriptive_stats = statistical_analyzer.get_descriptive_stats() if statistical_analyzer is not None else {}
         data_summary = data_cleaner.get_data_summary()
         
         # Ensure data_summary is consistent with current mode
@@ -245,7 +309,10 @@ def dashboard():
         
         # Calculate additional stats for the dashboard
         cleaned_data = data_cleaner.get_cleaned_data()
-        included_data = cleaned_data[cleaned_data['include_in_primary']]
+        if len(cleaned_data) > 0 and 'include_in_primary' in cleaned_data.columns:
+            included_data = cleaned_data[cleaned_data['include_in_primary']]
+        else:
+            included_data = cleaned_data
         
         # Get data summary for consistent counts
         data_summary = data_cleaner.get_data_summary()
@@ -260,8 +327,8 @@ def dashboard():
         dashboard_stats = {
             'total_participants': len(included_participants),  # Only completed CSV data
             'total_responses': len(included_data) if len(included_data) > 0 else 0,  # Only completed CSV data
-            'avg_trust_rating': included_data['trust_rating'].mean() if len(included_data) > 0 else 0,
-            'std_trust_rating': included_data['trust_rating'].std() if len(included_data) > 0 else 0,
+            'avg_trust_rating': included_data['trust_rating'].mean() if len(included_data) > 0 and 'trust_rating' in included_data.columns else 0,
+            'std_trust_rating': included_data['trust_rating'].std() if len(included_data) > 0 and 'trust_rating' in included_data.columns else 0,
             'included_participants': len(included_participants),  # Only completed CSV data
             'cleaned_trials': len(included_data) if len(included_data) > 0 else 0,  # Only completed CSV data
             'raw_responses': exclusion_summary['total_raw'],
@@ -294,16 +361,20 @@ def dashboard():
                     # Note: Numeric participant IDs like 200.csv are REAL study data, not test data
                 )
                 
+                # Skip backup files entirely
+                if file_name.endswith('_backup.csv'):
+                    continue
+                
                 # Debug: Print file classification
                 print(f"DEBUG: {file_name} -> {'Test' if is_test_file else 'Production'}")
                 
                 # Filter files based on current mode
                 if data_cleaner.test_mode:
-                    # Test mode: show all files
-                    show_file = True
+                    # Test mode: show only test files
+                    show_file = is_test_file
                 else:
-                    # Production mode: only show real participant files
-                    show_file = not is_test_file
+                    # Production mode: show NO files at all
+                    show_file = False
                 
                 if show_file:
                     data_files.append({
@@ -346,7 +417,8 @@ def dashboard():
                     
                     # Filter based on mode and incomplete toggle
                     if data_cleaner.test_mode:
-                        show_session = True  # Test mode shows everything
+                        # Test mode: show only test sessions
+                        show_session = is_test_session
                     else:
                         # Production mode: show ALL sessions (test and real) if incomplete toggle is enabled
                         show_session = show_incomplete_in_production  # Show any sessions if toggle enabled
@@ -436,7 +508,7 @@ def api_overview():
         # Check if components are initialized
         if data_cleaner is None or statistical_analyzer is None:
             print("DEBUG: API Overview - Initializing data components...")
-            if not initialize_data():
+            if not initialize_data(force_mode=False):
                 print("ERROR: API Overview - Data initialization failed")
                 return jsonify({'error': 'Data initialization failed'}), 500
             print("DEBUG: API Overview - Data components initialized successfully")
@@ -470,6 +542,7 @@ def api_overview():
         response_data = {
             'exclusion_summary': convert_numpy_types(exclusion_summary),
             'descriptive_stats': convert_numpy_types(descriptive_stats),
+            'data_summary': convert_numpy_types(data_cleaner.get_data_summary()),
             'timestamp': datetime.now().isoformat(),
             'status': 'success'
         }
@@ -491,7 +564,7 @@ def api_statistical_tests():
     global statistical_analyzer
     
     if statistical_analyzer is None:
-        if not initialize_data():
+        if not initialize_data(force_mode=False):
             return jsonify({'error': 'Data initialization failed'}), 500
     
     try:
@@ -646,10 +719,14 @@ def participants():
         return render_template('error.html', message=str(e))
 
 @app.route('/images')
-@login_required
+# @login_required  # Temporarily disabled for Render deployment
 def images():
     """Images analysis page."""
     try:
+        if data_cleaner is None or data_cleaner.raw_data.empty or statistical_analyzer is None:
+            # No data available - show empty state
+            return render_template('images.html', images=[])
+        
         image_summary = statistical_analyzer.get_image_summary()
         return render_template('images.html', images=image_summary.to_dict('records'))
     except Exception as e:
@@ -661,6 +738,10 @@ def images():
 def statistics():
     """Statistical tests page."""
     try:
+        if statistical_analyzer is None:
+            # No data available - show empty state
+            return render_template('statistics.html', test_results={})
+        
         # Run all statistical tests
         test_results = {
             'paired_t_test': statistical_analyzer.paired_t_test_half_vs_full(),
@@ -831,6 +912,7 @@ def health():
 def api_refresh_data():
     """API endpoint to manually refresh data."""
     try:
+        print("🔄 Manual data refresh requested via API")
         trigger_data_refresh()
         return jsonify({
             'status': 'success',
@@ -838,6 +920,7 @@ def api_refresh_data():
             'timestamp': datetime.now().isoformat()
         })
     except Exception as e:
+        print(f"❌ Manual refresh failed: {e}")
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 @app.route('/api/data_status')
@@ -917,8 +1000,8 @@ def toggle_mode():
     current_mode = data_cleaner.test_mode if data_cleaner else False
     new_mode = not current_mode
     
-    # Reinitialize with new mode
-    if initialize_data(test_mode=new_mode):
+    # Reinitialize with new mode, forcing the mode (not auto-detecting)
+    if initialize_data(test_mode=new_mode, force_mode=True):
         mode_name = "TEST" if new_mode else "PRODUCTION"
         flash(f'Switched to {mode_name} mode successfully', 'success')
     else:
@@ -1591,11 +1674,48 @@ def api_participant_details(pid):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/admin/delete/<filename>', methods=['POST'])
+@login_required
+def delete_file(filename):
+    """Delete a participant data file."""
+    try:
+        import os
+        from pathlib import Path
+        
+        # Security check: ensure filename is safe
+        if not filename or '..' in filename or '/' in filename or '\\' in filename:
+            flash('Invalid filename', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Define the data directory
+        data_dir = Path('data/responses')
+        
+        # Check if file exists
+        file_path = data_dir / filename
+        if not file_path.exists():
+            flash(f'File {filename} not found', 'error')
+            return redirect(url_for('dashboard'))
+        
+        # Delete the file
+        file_path.unlink()
+        
+        # Reinitialize data to refresh the dashboard
+        if initialize_data(force_mode=False):
+            flash(f'File {filename} deleted successfully', 'success')
+        else:
+            flash(f'File {filename} deleted but data refresh failed', 'warning')
+        
+        return redirect(url_for('dashboard'))
+        
+    except Exception as e:
+        flash(f'Error deleting file: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
+
 if __name__ == '__main__':
     # Initialize data on startup
-    if initialize_data():
+    if initialize_data(force_mode=False):
         print("Dashboard ready to start")
     else:
         print("Warning: Data initialization failed")
     
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='127.0.0.1', port=5000, debug=False)

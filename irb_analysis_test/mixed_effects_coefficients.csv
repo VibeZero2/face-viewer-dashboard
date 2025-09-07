@@ -1,0 +1,6 @@
+Variable,Coefficient,Effect_Size,Interpretation
+Intercept,4.4182156133829,Reference,Baseline trust rating
+Face View: order,-0.005538344455518645,negligible,Change in trust rating for order view
+Face View: full,0.2245759380658195,small,Change in trust rating for full view
+Face View: left,0.24962757324452028,small,Change in trust rating for left view
+Face View: right,-0.4892299845988765,small,Change in trust rating for right view

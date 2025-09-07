@@ -1,8 +1,0 @@
-pid,timestamp,face_id,version,order_presented,trust_rating,masc_choice,fem_choice,emotion_rating,trust_q2,trust_q3,pers_q1,pers_q2,pers_q3,pers_q4,pers_q5,prolific_pid
-200,2025-08-19T12:00:05.873106,Face ID (25),full,0,7,left,left,,,,,,,,,
-200,2025-08-20T13:22:41.223987,Face ID (25),left,0,4,right,left,7,,,,,,,,
-200,2025-08-20T13:22:41.223987,Face ID (25),right,0,3,right,left,3,,,,,,,,
-200,2025-08-20T13:22:49.630235,Face ID (25),full,1,9,right,left,3,,,,,,,,
-200,2025-08-20T13:23:00.714612,Face ID (72),left,2,7,right,left,7,,,,,,,,
-200,2025-08-20T13:23:00.714612,Face ID (72),right,2,1,right,left,1,,,,,,,,
-200,2025-08-20T13:23:07.994229,Face ID (72),full,3,9,right,left,1,,,,,,,,
