@@ -63,13 +63,29 @@ class DataCleaner:
             
             logger.info("TEST MODE: Loading only test CSV files")
         else:
-            # Production mode: show NO files at all (empty state)
+            # Production mode: include ONLY real participant files (exclude test files)
             filtered_files = []
-            excluded_files = [f.name for f in csv_files]
+            excluded_files = []
             
-            logger.info(f"PRODUCTION MODE: Excluded all files (showing empty state): {excluded_files}")
+            for file_path in csv_files:
+                file_name = file_path.name
+                
+                # Include real participant files, exclude test files
+                if (file_name.startswith('participant_') or 
+                    (file_name.endswith('.csv') and not file_name.startswith('test_') and 
+                     not file_name.startswith('test_participant') and 
+                     'test_statistical_validation' not in file_name and
+                     not file_name.startswith('PROLIFIC_TEST_') and
+                     file_name not in ['test789.csv', 'test123.csv', 'test456.csv', 'test_participants_combined.csv']) and 
+                    not file_name.endswith('_backup.csv')):
+                    filtered_files.append(file_path)
+                else:
+                    excluded_files.append(file_name)
             
-            # Don't raise error - allow empty state in production mode
+            if excluded_files:
+                logger.info(f"PRODUCTION MODE: Excluded test files: {excluded_files}")
+            
+            logger.info(f"PRODUCTION MODE: Loading {len(filtered_files)} real participant files")
         
         all_data = []
         real_participants = 0

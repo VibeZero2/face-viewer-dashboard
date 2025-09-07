@@ -990,6 +990,44 @@ def api_live_updates():
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@app.route('/reset_participant/<participant_id>', methods=['POST'])
+def reset_participant(participant_id):
+    """Reset all data for a specific participant"""
+    try:
+        import os
+        import shutil
+        from pathlib import Path
+        
+        # Define paths
+        responses_dir = Path("../facial-trust-study/data/responses")
+        sessions_dir = Path("../facial-trust-study/data/sessions")
+        
+        files_removed = 0
+        
+        # Remove CSV files
+        if responses_dir.exists():
+            for file_path in responses_dir.glob(f"*{participant_id}*"):
+                if file_path.is_file():
+                    file_path.unlink()
+                    files_removed += 1
+        
+        # Remove session files
+        if sessions_dir.exists():
+            for file_path in sessions_dir.glob(f"*{participant_id}*"):
+                if file_path.is_file():
+                    file_path.unlink()
+                    files_removed += 1
+        
+        # Reinitialize data to refresh the dashboard
+        initialize_data(force_mode=True)
+        
+        flash(f'Participant {participant_id} reset successfully. {files_removed} files removed.', 'success')
+        return redirect(url_for('dashboard'))
+        
+    except Exception as e:
+        flash(f'Error resetting participant {participant_id}: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
+
 @app.route('/toggle_mode', methods=['GET', 'POST'])
 # @login_required  # Temporarily disabled for Render deployment
 def toggle_mode():
