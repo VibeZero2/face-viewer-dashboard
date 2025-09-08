@@ -20,134 +20,15 @@ class DataCleaner:
         self.cleaned_data = None
         self.exclusion_summary = {}
         
-    def load_data_NEW_VERSION(self) -> pd.DataFrame:
-        """
-        Load and merge CSV files from the responses directory.
-        By default, only loads real study data files (participant_*.csv and study program files).
-        Set test_mode=True to include test files.
-        """
+    
+    def load_data(self) -> pd.DataFrame:
+        """Load and merge CSV files from the responses directory based on mode."""
         csv_files = list(self.data_dir.glob("*.csv"))
-        print(f"🔍 Found {len(csv_files)} CSV files in {self.data_dir}")
-        print(f"📁 Files: {[f.name for f in csv_files]}")
         
         if not csv_files:
             raise FileNotFoundError(f"No CSV files found in {self.data_dir}")
         
         # Filter files based on mode
-        if self.test_mode:
-            # Test mode: include ONLY test files
-            filtered_files = []
-            excluded_files = []
-            
-            for file_path in csv_files:
-                file_name = file_path.name
-                
-                # Include only test files (exclude backup files)
-                if (file_name.startswith('test_') or 
-                    file_name.startswith('test_participant') or
-                    'test_statistical_validation' in file_name or
-                    file_name.startswith('PROLIFIC_TEST_') or
-                    file_name == 'test789.csv' or
-                    file_name == 'test123.csv' or
-                    file_name == 'test456.csv' or
-                    file_name == 'test_participants_combined.csv') and not file_name.endswith('_backup.csv'):
-                    filtered_files.append(file_path)
-                else:
-                    excluded_files.append(file_name)
-            
-            if excluded_files:
-                logger.info(f"TEST MODE: Excluded production files: {excluded_files}")
-            
-            if not filtered_files:
-                raise FileNotFoundError(f"No test data files found in {self.data_dir}")
-            
-            logger.info("TEST MODE: Loading only test CSV files")
-        else:
-            # Production mode: include ONLY real participant files (exclude test files)
-            filtered_files = []
-            excluded_files = []
-            
-            for file_path in csv_files:
-                file_name = file_path.name
-                
-                # Include ONLY real participant files (exclude ALL test files)
-                if (file_name.startswith('participant_') and 
-                    not file_name.startswith('test_participant') and 
-                    not file_name.endswith('_backup.csv') and
-                    'test' not in file_name.lower()):
-                    filtered_files.append(file_path)
-                else:
-                    excluded_files.append(file_name)
-            
-            if excluded_files:
-                logger.info(f"PRODUCTION MODE: Excluded test files: {excluded_files}")
-            
-            logger.info(f"PRODUCTION MODE: Loading {len(filtered_files)} real participant files")
-        
-        all_data = []
-        real_participants = 0
-        total_rows = 0
-        
-        for file_path in filtered_files:
-            try:
-                df = pd.read_csv(file_path)
-                print(f"📊 Loaded {len(df)} rows from {file_path.name}")
-                
-                # Add file metadata
-                df['source_file'] = file_path.name
-                df['loaded_at'] = pd.Timestamp.now()
-                
-                # Standardize column names - but preserve original names for mapping
-                original_columns = df.columns.copy()
-                df.columns = df.columns.str.lower().str.replace(' ', '_')
-                
-                all_data.append(df)
-                
-                # Count real participants (files that look like real data)
-                if (file_path.name.startswith('participant_') or 
-                    ('_2025' in file_path.name and not file_path.name.startswith('test_')) or
-                    file_path.name.replace('.csv', '').isdigit()):
-                    real_participants += 1
-                
-                total_rows += len(df)
-                logger.info(f"Loaded {len(df)} rows from {file_path.name}")
-                
-            except Exception as e:
-                logger.error(f"Error loading {file_path}: {e}")
-                continue
-        
-        if not all_data:
-            if self.test_mode:
-                raise ValueError("No valid CSV files could be loaded")
-            else:
-                # Production mode: allow empty state
-                self.raw_data = pd.DataFrame()
-                logger.info("PRODUCTION MODE: No files loaded (empty state)")
-                return self.raw_data
-        
-        # Merge all dataframes
-        self.raw_data = pd.concat(all_data, ignore_index=True)
-        
-        # Log summary
-        if self.test_mode:
-            logger.info(f"TEST MODE: Total data loaded: {len(self.raw_data)} rows from {len(filtered_files)} files")
-        else:
-            logger.info(f"PRODUCTION MODE: Loaded {len(self.raw_data)} rows from {real_participants} real participants")
-        
-        # Debug: Show what files were actually loaded
-        if self.raw_data is not None and 'source_file' in self.raw_data.columns:
-            loaded_files = self.raw_data['source_file'].unique()
-            print(f"DEBUG DataCleaner: Actually loaded {len(loaded_files)} files: {loaded_files}")
-            print(f"DEBUG DataCleaner: test_mode={self.test_mode}, filtered_files count={len(filtered_files)}")
-        
-        return self.raw_data
-    
-    def load_data(self) -> pd.DataFrame:
-        """SIMPLE VERSION - Load only the files we want"""
-        csv_files = list(self.data_dir.glob("*.csv"))
-        print(f"🚨 SIMPLE LOAD: Found {len(csv_files)} CSV files")
-        
-        # SIMPLE FILTERING
         files_to_load = []
         
         if self.test_mode:
@@ -155,15 +36,12 @@ class DataCleaner:
             for file_path in csv_files:
                 if file_path.name.startswith('test_'):
                     files_to_load.append(file_path)
-                    print(f"🟢 LOADING TEST: {file_path.name}")
         else:
             # PRODUCTION MODE: Only participant_200_ files  
             for file_path in csv_files:
                 if file_path.name.startswith('participant_200_'):
                     files_to_load.append(file_path)
-                    print(f"🔵 LOADING PROD: {file_path.name}")
         
-        print(f"🚨 SIMPLE LOAD: Will load {len(files_to_load)} files")
         
         if not files_to_load:
             self.raw_data = pd.DataFrame()
@@ -176,13 +54,12 @@ class DataCleaner:
                 df = pd.read_csv(file_path)
                 df['source_file'] = file_path.name
                 all_data.append(df)
-                print(f"🚨 LOADED: {file_path.name} with {len(df)} rows")
             except Exception as e:
-                print(f"ERROR loading {file_path.name}: {e}")
+                logger.error(f"Error loading {file_path}: {e}")
+                continue
         
         if all_data:
             self.raw_data = pd.concat(all_data, ignore_index=True)
-            print(f"🚨 FINAL RESULT: {len(self.raw_data)} total rows from {len(files_to_load)} files")
         else:
             self.raw_data = pd.DataFrame()
             

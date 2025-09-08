@@ -306,13 +306,10 @@ def dashboard():
         data_summary = data_cleaner.get_data_summary()
         
         # Ensure data_summary is consistent with current mode
-        print(f"*** DASHBOARD ROUTE: data_cleaner.test_mode = {data_cleaner.test_mode} ***")
         if data_cleaner.test_mode:
             data_summary['mode'] = 'TEST'
-            print(f"*** DASHBOARD ROUTE: Set mode to TEST ***")
         else:
             data_summary['mode'] = 'PRODUCTION'
-            print(f"*** DASHBOARD ROUTE: Set mode to PRODUCTION ***")
         
         # Calculate additional stats for the dashboard
         cleaned_data = data_cleaner.get_cleaned_data()
@@ -321,11 +318,9 @@ def dashboard():
         if not data_cleaner.test_mode and cleaned_data is not None and len(cleaned_data) > 0:
             if 'pid' in cleaned_data.columns:
                 cleaned_data = cleaned_data[cleaned_data['pid'] == 200]
-                print(f"🚨 OVERRIDE: Filtered to participant 200 only - {len(cleaned_data)} rows remaining")
                 # Further filter out test data (prolific_pid contains "TEST")
                 if 'prolific_pid' in cleaned_data.columns:
                     real_data = cleaned_data[~cleaned_data['prolific_pid'].str.contains('TEST', na=False)]
-                    print(f"🚨 OVERRIDE: After filtering out test data - {len(real_data)} rows remaining")
                     cleaned_data = real_data
         
         if len(cleaned_data) > 0 and 'include_in_primary' in cleaned_data.columns:
@@ -337,9 +332,6 @@ def dashboard():
         
         # Debug: Check what participants are in included_data
         included_participants = included_data['pid'].unique() if len(included_data) > 0 else []
-        print(f"🚨 OVERRIDE DEBUG: Included participants: {included_participants}")
-        print(f"🚨 OVERRIDE DEBUG: Total included data rows: {len(included_data)}")
-        print(f"🚨 OVERRIDE DEBUG: data_cleaner.test_mode: {data_cleaner.test_mode}")
         
         # OVERRIDE: Force correct statistics for production mode
         if not data_cleaner.test_mode:
@@ -351,9 +343,7 @@ def dashboard():
             if len(included_data) == 0:
                 data_summary['avg_trust_rating'] = 0
                 data_summary['trust_rating_std'] = 0
-                print(f"🚨 OVERRIDE: No completed responses - set trust stats to 0")
             
-            print(f"🚨 OVERRIDE: Set production stats - {data_summary['total_participants']} participants, {data_summary['total_responses']} responses")
         
         # IMPORTANT: Dashboard statistics are calculated ONLY from completed CSV files
         # Session data (incomplete participants) is NEVER included in these counts
@@ -376,7 +366,6 @@ def dashboard():
         # ================================================================================================
         data_files = []
         session_data = []
-        print(f"DEBUG: session_data initialized as list: {type(session_data)}")
         
         # Load completed data files
         data_dir = DATA_DIR
@@ -400,7 +389,6 @@ def dashboard():
                     continue
                 
                 # Debug: Print file classification
-                print(f"DEBUG: {file_name} -> {'Test' if is_test_file else 'Production'}")
                 
                 # Filter files based on current mode
                 if data_cleaner.test_mode:
@@ -424,13 +412,10 @@ def dashboard():
         sessions_dir = Path("../facial-trust-study/data/sessions")
         if not sessions_dir.exists():
             sessions_dir = Path("data/sessions")
-        print(f"DEBUG: Using sessions directory: {sessions_dir}")
         if sessions_dir.exists():
             import json
             # session_data already declared above, don't redeclare it
-            print(f"DEBUG: Checking sessions directory: {sessions_dir}")
             session_files = list(sessions_dir.glob("*_session.json"))
-            print(f"DEBUG: Found {len(session_files)} session files: {[f.name for f in session_files]}")
             for session_file in session_files:
                 try:
                     with open(session_file, 'r') as f:
@@ -439,7 +424,6 @@ def dashboard():
                     participant_id = session_info.get('participant_id', 'Unknown')
                     session_complete = session_info.get('session_complete', False)
                     
-                    print(f"DEBUG: Processing session {participant_id}, complete: {session_complete}")
                     
                     # Only show incomplete sessions and apply mode filtering
                     is_test_session = (
@@ -447,7 +431,6 @@ def dashboard():
                         # Note: Numeric IDs like "200" are REAL study data, not test data
                     )
                     
-                    print(f"DEBUG: Session {participant_id} - is_test: {is_test_session}, test_mode: {data_cleaner.test_mode}, show_incomplete: {show_incomplete_in_production}")
                     
                     # Filter based on mode and incomplete toggle
                     if data_cleaner.test_mode:
@@ -457,7 +440,6 @@ def dashboard():
                         # Production mode: ONLY show non-test sessions (like session 200) if incomplete toggle is enabled
                         show_session = not is_test_session and show_incomplete_in_production and not session_complete
                     
-                    print(f"DEBUG: Session {participant_id} - show_session: {show_session}, not complete: {not session_complete}")
                     
                     if show_session and not session_complete:
                         face_order = session_info.get('face_order', [])
@@ -471,8 +453,6 @@ def dashboard():
                         current_face_index = session_info_data.get('current_face_index', 0)
                         completed_faces_count = len(responses)  # Simple count of responses for now
                         
-                        print(f"DEBUG: Session {participant_id} - Analyzing {len(responses)} responses")
-                        print(f"DEBUG: Session {participant_id} - Current face index: {current_face_index}, Total faces: {total_faces}")
                         
                         # Use current_face_index if available, otherwise count unique responses
                         if current_face_index > 0:
@@ -484,12 +464,10 @@ def dashboard():
                                 if isinstance(r, dict) and r.get('face_id'):
                                     unique_faces.add(r.get('face_id'))
                             completed_faces_count = len(unique_faces)
-                            print(f"DEBUG: Session {participant_id} - Found {len(unique_faces)} unique faces in responses")
                         
                         completed_faces = completed_faces_count
                         progress_percent = (completed_faces / total_faces * 100) if total_faces > 0 else 0
                         
-                        print(f"DEBUG: About to append to session_data. Type: {type(session_data)}")
                         session_data.append({
                             'name': f"{participant_id} (Session)",
                             'size': f"{completed_faces}/{total_faces} faces",
@@ -498,17 +476,11 @@ def dashboard():
                             'status': f'Incomplete ({progress_percent:.1f}%)',
                             'participant_id': participant_id
                         })
-                        print(f"DEBUG: Session {participant_id} - Calculated progress: {completed_faces}/{total_faces} faces ({progress_percent:.1f}%), {len(responses)} total responses")
-                        print(f"DEBUG: Added session {participant_id} to session_data")
                         
                 except Exception as e:
-                    print(f"DEBUG: Error reading session file {session_file}: {e}")
         
         # Combine data files and session data
         all_files = data_files + session_data
-        print(f"DEBUG: Total files to display: {len(all_files)} (CSV: {len(data_files)}, Sessions: {len(session_data)})")
-        if session_data:
-            print(f"DEBUG: Session data: {[s['name'] for s in session_data]}")
         
         return render_template('dashboard.html',
                          exclusion_summary=exclusion_summary,
@@ -531,23 +503,19 @@ def api_overview():
     try:
         # Check if components are initialized
         if data_cleaner is None or statistical_analyzer is None:
-            print("DEBUG: API Overview - Initializing data components...")
             if not initialize_data(force_mode=False):
                 print("ERROR: API Overview - Data initialization failed")
                 return jsonify({'error': 'Data initialization failed'}), 500
-            print("DEBUG: API Overview - Data components initialized successfully")
         
         # Get data with error handling
         try:
             exclusion_summary = data_cleaner.get_exclusion_summary()
-            print("DEBUG: API Overview - Got exclusion summary")
         except Exception as e:
             print(f"ERROR: API Overview - Failed to get exclusion summary: {e}")
             exclusion_summary = {'error': f'Exclusion summary failed: {str(e)}'}
         
         try:
             descriptive_stats = statistical_analyzer.get_descriptive_stats()
-            print("DEBUG: API Overview - Got descriptive stats")
         except Exception as e:
             print(f"ERROR: API Overview - Failed to get descriptive stats: {e}")
             descriptive_stats = {'error': f'Descriptive stats failed: {str(e)}'}
@@ -571,7 +539,6 @@ def api_overview():
             'status': 'success'
         }
         
-        print("DEBUG: API Overview - Returning successful response")
         return jsonify(response_data)
         
     except Exception as e:
@@ -1062,25 +1029,15 @@ def toggle_mode():
     current_mode = data_cleaner.test_mode if data_cleaner else False
     new_mode = not current_mode
     
-    print(f"*** TOGGLE FUNCTION CALLED ***")
-    print(f"*** Current mode: {current_mode} (TEST={current_mode}) ***")
-    print(f"*** Switching to: {new_mode} (TEST={new_mode}) ***")
-    print(f"*** data_cleaner object: {data_cleaner} ***")
-    
     # Reinitialize with new mode, forcing the mode (not auto-detecting)
     success = initialize_data(test_mode=new_mode, force_mode=True)
-    print(f"*** initialize_data returned: {success} ***")
     
     if success:
         mode_name = "TEST" if new_mode else "PRODUCTION"
-        print(f"*** Successfully switched to {mode_name} mode ***")
-        print(f"*** data_cleaner.test_mode after switch: {data_cleaner.test_mode if data_cleaner else 'None'} ***")
         flash(f'Switched to {mode_name} mode successfully', 'success')
     else:
-        print(f"*** Failed to switch modes ***")
         flash('Failed to switch modes', 'error')
     
-    print(f"*** About to redirect to dashboard ***")
     return redirect(url_for('dashboard'))
 
 @app.route('/toggle_incomplete', methods=['POST'])
