@@ -445,27 +445,34 @@ def dashboard():
                     
                     if show_session and not session_complete:
                         face_order = session_info.get('face_order', [])
-                        # Get total_faces from session_data if face_order is empty
+                        # Handle both old and new session file formats
                         session_info_data = session_info.get('session_data', {})
-                        total_faces = 35  # Override: Study uses 35 faces total, not 100
+                        total_faces = len(session_info.get('face_order', []))  # Use actual face_order length
+                        if total_faces == 0:
+                            total_faces = 35  # Fallback to 35 faces
                         
-                        # IMPORTANT: Calculate completed faces the same way as session resume
-                        # Analyze actual responses to determine which faces are complete
-                        responses = session_info_data.get('responses', [])
-                        current_face_index = session_info_data.get('current_face_index', 0)
-                        completed_faces_count = len(responses)  # Simple count of responses for now
+                        # Get responses and current index from the correct location
+                        responses = session_info.get('responses', session_info_data.get('responses', []))
+                        current_face_index = session_info.get('index', session_info_data.get('current_face_index', 0))
                         
-                        
-                        # Use current_face_index if available, otherwise count unique responses
-                        if current_face_index > 0:
-                            completed_faces_count = current_face_index
-                        elif responses:
-                            # Count unique face IDs in responses
+                        # Calculate completed faces based on responses
+                        if responses:
+                            # Count unique face IDs in responses to get actual completed faces
                             unique_faces = set()
                             for r in responses:
-                                if isinstance(r, dict) and r.get('face_id'):
-                                    unique_faces.add(r.get('face_id'))
+                                # Handle both dict format and list format
+                                if isinstance(r, dict):
+                                    face_id = r.get('face_id')
+                                elif isinstance(r, list) and len(r) > 2:
+                                    face_id = r[2]  # face_id is at index 2 in list format
+                                else:
+                                    continue
+                                    
+                                if face_id:
+                                    unique_faces.add(face_id)
                             completed_faces_count = len(unique_faces)
+                        else:
+                            completed_faces_count = 0
                         
                         completed_faces = completed_faces_count
                         progress_percent = (completed_faces / total_faces * 100) if total_faces > 0 else 0
