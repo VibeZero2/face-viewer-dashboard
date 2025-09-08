@@ -53,7 +53,7 @@ class DataFileHandler(FileSystemEventHandler):
             filename = Path(event.src_path).name
             print(f"🆕 New data file detected: {filename}")
             print(f"   📍 Full path: {event.src_path}")
-            self.dashboard_app.trigger_data_refresh()
+            trigger_data_refresh()
     
     def on_modified(self, event):
         if not event.is_directory and event.src_path.endswith('.csv'):
@@ -65,7 +65,7 @@ class DataFileHandler(FileSystemEventHandler):
                 print(f"📝 Data file modified: {filename}")
                 print(f"   📍 Full path: {event.src_path}")
                 self.last_modified[event.src_path] = current_time
-                self.dashboard_app.trigger_data_refresh()
+                trigger_data_refresh()
 
 def start_file_watcher():
     """Start watching the data directory for new files"""
