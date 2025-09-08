@@ -1050,6 +1050,34 @@ def toggle_mode():
     
     return redirect(url_for('dashboard'))
 
+@app.route('/debug_sessions', methods=['GET'])
+def debug_sessions():
+    """Debug endpoint to show session data format"""
+    sessions_dir = Path("../facial-trust-study/data/sessions")
+    
+    if not sessions_dir.exists():
+        return f"<h1>Debug Sessions</h1><p>Sessions directory not found: {sessions_dir}</p>"
+    
+    session_files = list(sessions_dir.glob("*.json"))
+    
+    if not session_files:
+        return "<h1>Debug Sessions</h1><p>No session files found</p>"
+    
+    output = "<h1>Debug Sessions</h1>"
+    
+    for session_file in session_files:
+        try:
+            with open(session_file, 'r') as f:
+                session_data = json.load(f)
+            
+            output += f"<h2>{session_file.name}</h2>"
+            output += f"<pre>{json.dumps(session_data, indent=2)}</pre><hr>"
+            
+        except Exception as e:
+            output += f"<p>Error reading {session_file.name}: {e}</p>"
+    
+    return output
+
 @app.route('/cleanup_p008', methods=['GET', 'POST'])
 def cleanup_p008():
     """Delete P008 files from dashboard data directories"""
