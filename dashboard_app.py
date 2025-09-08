@@ -478,6 +478,7 @@ def dashboard():
                         })
                         
                 except Exception as e:
+                    print(f"Error reading session file {session_file}: {e}")
         
         # Combine data files and session data
         all_files = data_files + session_data
