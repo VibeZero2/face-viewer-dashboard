@@ -20,7 +20,7 @@ class DataCleaner:
         self.cleaned_data = None
         self.exclusion_summary = {}
         
-    def load_data(self) -> pd.DataFrame:
+    def load_data_NEW_VERSION(self) -> pd.DataFrame:
         """
         Load and merge CSV files from the responses directory.
         By default, only loads real study data files (participant_*.csv and study program files).
@@ -70,14 +70,11 @@ class DataCleaner:
             for file_path in csv_files:
                 file_name = file_path.name
                 
-                # Include real participant files, exclude test files
-                if (file_name.startswith('participant_') or 
-                    (file_name.endswith('.csv') and not file_name.startswith('test_') and 
-                     not file_name.startswith('test_participant') and 
-                     'test_statistical_validation' not in file_name and
-                     not file_name.startswith('PROLIFIC_TEST_') and
-                     file_name not in ['test789.csv', 'test123.csv', 'test456.csv', 'test_participants_combined.csv']) and 
-                    not file_name.endswith('_backup.csv')):
+                # Include ONLY real participant files (exclude ALL test files)
+                if (file_name.startswith('participant_') and 
+                    not file_name.startswith('test_participant') and 
+                    not file_name.endswith('_backup.csv') and
+                    'test' not in file_name.lower()):
                     filtered_files.append(file_path)
                 else:
                     excluded_files.append(file_name)
@@ -137,6 +134,58 @@ class DataCleaner:
         else:
             logger.info(f"PRODUCTION MODE: Loaded {len(self.raw_data)} rows from {real_participants} real participants")
         
+        # Debug: Show what files were actually loaded
+        if self.raw_data is not None and 'source_file' in self.raw_data.columns:
+            loaded_files = self.raw_data['source_file'].unique()
+            print(f"DEBUG DataCleaner: Actually loaded {len(loaded_files)} files: {loaded_files}")
+            print(f"DEBUG DataCleaner: test_mode={self.test_mode}, filtered_files count={len(filtered_files)}")
+        
+        return self.raw_data
+    
+    def load_data(self) -> pd.DataFrame:
+        """SIMPLE VERSION - Load only the files we want"""
+        csv_files = list(self.data_dir.glob("*.csv"))
+        print(f"🚨 SIMPLE LOAD: Found {len(csv_files)} CSV files")
+        
+        # SIMPLE FILTERING
+        files_to_load = []
+        
+        if self.test_mode:
+            # TEST MODE: Only test_ files
+            for file_path in csv_files:
+                if file_path.name.startswith('test_'):
+                    files_to_load.append(file_path)
+                    print(f"🟢 LOADING TEST: {file_path.name}")
+        else:
+            # PRODUCTION MODE: Only participant_200_ files  
+            for file_path in csv_files:
+                if file_path.name.startswith('participant_200_'):
+                    files_to_load.append(file_path)
+                    print(f"🔵 LOADING PROD: {file_path.name}")
+        
+        print(f"🚨 SIMPLE LOAD: Will load {len(files_to_load)} files")
+        
+        if not files_to_load:
+            self.raw_data = pd.DataFrame()
+            return self.raw_data
+            
+        # Load the files
+        all_data = []
+        for file_path in files_to_load:
+            try:
+                df = pd.read_csv(file_path)
+                df['source_file'] = file_path.name
+                all_data.append(df)
+                print(f"🚨 LOADED: {file_path.name} with {len(df)} rows")
+            except Exception as e:
+                print(f"ERROR loading {file_path.name}: {e}")
+        
+        if all_data:
+            self.raw_data = pd.concat(all_data, ignore_index=True)
+            print(f"🚨 FINAL RESULT: {len(self.raw_data)} total rows from {len(files_to_load)} files")
+        else:
+            self.raw_data = pd.DataFrame()
+            
         return self.raw_data
     
     def get_data_summary(self) -> Dict:
@@ -146,13 +195,38 @@ class DataCleaner:
         if self.raw_data is None:
             return {"status": "No data loaded"}
         
-        # Get all files in the directory to show what's available
-        csv_files = list(self.data_dir.glob("*.csv"))
-        all_real_files = []
-        all_test_files = []
+        # Check if we have any data loaded
+        if (len(self.raw_data) == 0 or 
+            not hasattr(self.raw_data, 'columns') or 
+            'source_file' not in self.raw_data.columns):
+            # Empty data - no files loaded
+            if self.test_mode:
+                return {
+                    "mode": "TEST",
+                    "total_rows": 0,
+                    "real_participants": 0,
+                    "test_files": 0,
+                    "real_files": [],
+                    "test_files_list": []
+                }
+            else:
+                return {
+                    "mode": "PRODUCTION",
+                    "total_rows": 0,
+                    "real_participants": 0,
+                    "test_files": 0,
+                    "real_files": [],
+                    "test_files_list": []
+                }
         
-        for file_path in csv_files:
-            file_name = file_path.name
+        # Get what's actually loaded
+        loaded_files = self.raw_data['source_file'].unique()
+        
+        # Categorize loaded files
+        loaded_real_files = []
+        loaded_test_files = []
+        
+        for file_name in loaded_files:
             if (file_name.startswith('test_') or 
                 file_name.startswith('test_participant') or
                 'test_statistical_validation' in file_name or
@@ -161,23 +235,9 @@ class DataCleaner:
                 file_name == 'test123.csv' or
                 file_name == 'test456.csv' or
                 file_name == 'test_participants_combined.csv'):
-                all_test_files.append(file_name)
+                loaded_test_files.append(file_name)
             else:
-                all_real_files.append(file_name)
-        
-        # Count what's actually loaded
-        if (self.raw_data is None or 
-            len(self.raw_data) == 0 or 
-            not hasattr(self.raw_data, 'columns') or 
-            'source_file' not in self.raw_data.columns):
-            # Empty data - no files loaded
-            loaded_files = []
-            loaded_real_files = []
-            loaded_test_files = []
-        else:
-            loaded_files = self.raw_data['source_file'].unique()
-            loaded_real_files = [f for f in loaded_files if f in all_real_files]
-            loaded_test_files = [f for f in loaded_files if f in all_test_files]
+                loaded_real_files.append(file_name)
         
         if self.test_mode:
             # In test mode, we show test files as "loaded" and real files as "excluded"

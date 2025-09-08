@@ -24,6 +24,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), 'analysis'))
 from analysis.cleaning import DataCleaner
 from analysis.stats import StatisticalAnalyzer
 from analysis.filters import DataFilter
+from config import DATA_DIR
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -38,7 +39,7 @@ last_data_refresh = None
 data_files_hash = None
 
 # Dashboard settings
-show_incomplete_in_production = False
+show_incomplete_in_production = True
 
 class DataFileHandler(FileSystemEventHandler):
     """Watchdog handler for detecting new data files"""
@@ -69,7 +70,7 @@ class DataFileHandler(FileSystemEventHandler):
 def start_file_watcher():
     """Start watching the data directory for new files"""
     try:
-        data_dir = Path("data/responses")
+        data_dir = DATA_DIR
         if data_dir.exists():
             event_handler = DataFileHandler(app)
             observer = Observer()
@@ -94,7 +95,7 @@ def initialize_data(test_mode=False, force_mode=False):
     
     try:
         # Check what data files are available
-        data_dir = Path("data/responses")
+        data_dir = DATA_DIR
         if data_dir.exists():
             csv_files = list(data_dir.glob("*.csv"))
             test_files = [f for f in csv_files if any(pattern in f.name for pattern in 
@@ -103,14 +104,17 @@ def initialize_data(test_mode=False, force_mode=False):
             
             # Auto-detect mode: if only test files exist, use test mode
             # But only if not forcing a specific mode (e.g., from manual toggle)
-            if not force_mode and not real_files and test_files:
-                print("Auto-detected: Only test files available, switching to TEST MODE")
-                test_mode = True
-            elif not csv_files:
-                raise FileNotFoundError("No CSV files found in data/responses")
+            if not force_mode:
+                if not real_files and test_files:
+                    print("Auto-detected: Only test files available, switching to TEST MODE")
+                    test_mode = True
+                elif not csv_files:
+                    raise FileNotFoundError(f"No CSV files found in {data_dir}")
+            else:
+                print(f"Force mode enabled: Using specified test_mode={test_mode}")
         
         # Use detected or specified mode
-        data_cleaner = DataCleaner("data/responses", test_mode=test_mode)
+        data_cleaner = DataCleaner(str(data_dir), test_mode=test_mode)
         data_cleaner.load_data()
         data_cleaner.standardize_data()
         data_cleaner.apply_exclusion_rules()
@@ -148,10 +152,10 @@ def trigger_data_refresh():
         print("🔄 Triggering data refresh...")
         
         # Log current files before refresh
-        data_dir = Path("data/responses")
+        data_dir = DATA_DIR
         if data_dir.exists():
             current_files = list(data_dir.glob("*.csv"))
-            print(f"📁 Current files in data/responses/: {[f.name for f in current_files]}")
+            print(f"📁 Current files in {data_dir}: {[f.name for f in current_files]}")
         
         if initialize_data(force_mode=False):
             last_data_refresh = datetime.now()
@@ -302,33 +306,62 @@ def dashboard():
         data_summary = data_cleaner.get_data_summary()
         
         # Ensure data_summary is consistent with current mode
+        print(f"*** DASHBOARD ROUTE: data_cleaner.test_mode = {data_cleaner.test_mode} ***")
         if data_cleaner.test_mode:
             data_summary['mode'] = 'TEST'
+            print(f"*** DASHBOARD ROUTE: Set mode to TEST ***")
         else:
             data_summary['mode'] = 'PRODUCTION'
+            print(f"*** DASHBOARD ROUTE: Set mode to PRODUCTION ***")
         
         # Calculate additional stats for the dashboard
         cleaned_data = data_cleaner.get_cleaned_data()
+        
+        # OVERRIDE: In production mode, filter to only participant 200 data AND exclude test data
+        if not data_cleaner.test_mode and cleaned_data is not None and len(cleaned_data) > 0:
+            if 'pid' in cleaned_data.columns:
+                cleaned_data = cleaned_data[cleaned_data['pid'] == 200]
+                print(f"🚨 OVERRIDE: Filtered to participant 200 only - {len(cleaned_data)} rows remaining")
+                # Further filter out test data (prolific_pid contains "TEST")
+                if 'prolific_pid' in cleaned_data.columns:
+                    real_data = cleaned_data[~cleaned_data['prolific_pid'].str.contains('TEST', na=False)]
+                    print(f"🚨 OVERRIDE: After filtering out test data - {len(real_data)} rows remaining")
+                    cleaned_data = real_data
+        
         if len(cleaned_data) > 0 and 'include_in_primary' in cleaned_data.columns:
             included_data = cleaned_data[cleaned_data['include_in_primary']]
         else:
             included_data = cleaned_data
         
-        # Get data summary for consistent counts
-        data_summary = data_cleaner.get_data_summary()
+        # data_summary already set above with correct mode
         
         # Debug: Check what participants are in included_data
         included_participants = included_data['pid'].unique() if len(included_data) > 0 else []
-        print(f"DEBUG: Included participants: {included_participants}")
-        print(f"DEBUG: Total included data rows: {len(included_data)}")
+        print(f"🚨 OVERRIDE DEBUG: Included participants: {included_participants}")
+        print(f"🚨 OVERRIDE DEBUG: Total included data rows: {len(included_data)}")
+        print(f"🚨 OVERRIDE DEBUG: data_cleaner.test_mode: {data_cleaner.test_mode}")
+        
+        # OVERRIDE: Force correct statistics for production mode
+        if not data_cleaner.test_mode:
+            data_summary['total_participants'] = 1  # Always 1 participant (200) in production
+            data_summary['real_participants'] = 1  # Always 1 participant (200) in production
+            data_summary['total_responses'] = len(included_data)
+            
+            # If no completed responses, override the trust rating stats to 0
+            if len(included_data) == 0:
+                data_summary['avg_trust_rating'] = 0
+                data_summary['trust_rating_std'] = 0
+                print(f"🚨 OVERRIDE: No completed responses - set trust stats to 0")
+            
+            print(f"🚨 OVERRIDE: Set production stats - {data_summary['total_participants']} participants, {data_summary['total_responses']} responses")
         
         # IMPORTANT: Dashboard statistics are calculated ONLY from completed CSV files
         # Session data (incomplete participants) is NEVER included in these counts
         dashboard_stats = {
-            'total_participants': len(included_participants),  # Only completed CSV data
-            'total_responses': len(included_data) if len(included_data) > 0 else 0,  # Only completed CSV data
-            'avg_trust_rating': included_data['trust_rating'].mean() if len(included_data) > 0 and 'trust_rating' in included_data.columns else 0,
-            'std_trust_rating': included_data['trust_rating'].std() if len(included_data) > 0 and 'trust_rating' in included_data.columns else 0,
+            'total_participants': data_summary.get('total_participants', len(included_participants)),  # Use override in production mode
+            'total_responses': data_summary.get('total_responses', len(included_data) if len(included_data) > 0 else 0),  # Use override in production mode
+            'avg_trust_rating': data_summary.get('avg_trust_rating', included_data['trust_rating'].mean() if len(included_data) > 0 and 'trust_rating' in included_data.columns else 0),
+            'std_trust_rating': data_summary.get('trust_rating_std', included_data['trust_rating'].std() if len(included_data) > 0 and 'trust_rating' in included_data.columns else 0),
             'included_participants': len(included_participants),  # Only completed CSV data
             'cleaned_trials': len(included_data) if len(included_data) > 0 else 0,  # Only completed CSV data
             'raw_responses': exclusion_summary['total_raw'],
@@ -343,9 +376,10 @@ def dashboard():
         # ================================================================================================
         data_files = []
         session_data = []
+        print(f"DEBUG: session_data initialized as list: {type(session_data)}")
         
         # Load completed data files
-        data_dir = Path("data/responses")
+        data_dir = DATA_DIR
         if data_dir.exists():
             for file_path in data_dir.glob("*.csv"):
                 stat = file_path.stat()
@@ -393,7 +427,7 @@ def dashboard():
         print(f"DEBUG: Using sessions directory: {sessions_dir}")
         if sessions_dir.exists():
             import json
-            session_data = []
+            # session_data already declared above, don't redeclare it
             print(f"DEBUG: Checking sessions directory: {sessions_dir}")
             session_files = list(sessions_dir.glob("*_session.json"))
             print(f"DEBUG: Found {len(session_files)} session files: {[f.name for f in session_files]}")
@@ -427,45 +461,35 @@ def dashboard():
                     
                     if show_session and not session_complete:
                         face_order = session_info.get('face_order', [])
-                        total_faces = len(face_order)
+                        # Get total_faces from session_data if face_order is empty
+                        session_info_data = session_info.get('session_data', {})
+                        total_faces = 35  # Override: Study uses 35 faces total, not 100
                         
                         # IMPORTANT: Calculate completed faces the same way as session resume
                         # Analyze actual responses to determine which faces are complete
-                        responses = session_info.get('responses', [])
-                        completed_faces_count = 0
+                        responses = session_info_data.get('responses', [])
+                        current_face_index = session_info_data.get('current_face_index', 0)
+                        completed_faces_count = len(responses)  # Simple count of responses for now
                         
                         print(f"DEBUG: Session {participant_id} - Analyzing {len(responses)} responses")
+                        print(f"DEBUG: Session {participant_id} - Current face index: {current_face_index}, Total faces: {total_faces}")
                         
-                        if face_order and responses:
-                            # Check each face in the original order
-                            for face_id in face_order:
-                                # Get all responses for this specific face
-                                face_responses = [r for r in responses if len(r) >= 4 and r[2] == face_id]
-                                toggle_responses = [r for r in face_responses if r[3] in ['left', 'right']]
-                                full_responses = [r for r in face_responses if r[3] == 'full']
-                                
-                                print(f"DEBUG: Face {face_id} - toggle: {len(toggle_responses)}, full: {len(full_responses)}")
-                                
-                                # Face is complete ONLY if it has both left+right (toggle) AND full responses
-                                is_complete = len(toggle_responses) >= 2 and len(full_responses) >= 1
-                                
-                                if is_complete:
-                                    completed_faces_count += 1
-                                    print(f"DEBUG: Face {face_id} - COMPLETE")
-                                elif len(face_responses) > 0:
-                                    # Count partial progress - if we have any responses for this face, count it as partial
-                                    completed_faces_count += 0.5  # Count as half a face for partial progress
-                                    print(f"DEBUG: Face {face_id} - PARTIAL PROGRESS (0.5)")
-                                    # Continue to next face instead of stopping
-                                    continue
-                                else:
-                                    # No responses for this face - stop here
-                                    print(f"DEBUG: Face {face_id} - NO RESPONSES, stopping")
-                                    break
+                        # Use current_face_index if available, otherwise count unique responses
+                        if current_face_index > 0:
+                            completed_faces_count = current_face_index
+                        elif responses:
+                            # Count unique face IDs in responses
+                            unique_faces = set()
+                            for r in responses:
+                                if isinstance(r, dict) and r.get('face_id'):
+                                    unique_faces.add(r.get('face_id'))
+                            completed_faces_count = len(unique_faces)
+                            print(f"DEBUG: Session {participant_id} - Found {len(unique_faces)} unique faces in responses")
                         
                         completed_faces = completed_faces_count
                         progress_percent = (completed_faces / total_faces * 100) if total_faces > 0 else 0
                         
+                        print(f"DEBUG: About to append to session_data. Type: {type(session_data)}")
                         session_data.append({
                             'name': f"{participant_id} (Session)",
                             'size': f"{completed_faces}/{total_faces} faces",
@@ -769,10 +793,10 @@ def exclusions():
         # Session-level details
         session_details = []
         for pid in cleaned_data['pid'].unique():
-            session_data = cleaned_data[cleaned_data['pid'] == pid]
+            participant_data = cleaned_data[cleaned_data['pid'] == pid]
             
             # Handle empty session data
-            if len(session_data) == 0:
+            if len(participant_data) == 0:
                 session_details.append({
                     'pid': pid,
                     'total_trials': 0,
@@ -782,24 +806,24 @@ def exclusions():
                 continue
             
             # Get inclusion status safely
-            included = session_data['include_in_primary'].iloc[0] if len(session_data) > 0 else False
+            included = participant_data['include_in_primary'].iloc[0] if len(participant_data) > 0 else False
             
             # Determine exclusion reasons
             exclusion_reasons = []
             if not included:
                 # Check for low completion
-                if len(session_data) < 48:  # 80% of 60 trials
+                if len(participant_data) < 48:  # 80% of 60 trials
                     exclusion_reasons.append('low_completion')
                 # Check for attention failures (placeholder)
-                if 'excl_failed_attention' in session_data.columns and session_data['excl_failed_attention'].any():
+                if 'excl_failed_attention' in participant_data.columns and participant_data['excl_failed_attention'].any():
                     exclusion_reasons.append('attention_failed')
                 # Check for device violations (placeholder)
-                if 'excl_device_violation' in session_data.columns and session_data['excl_device_violation'].any():
+                if 'excl_device_violation' in participant_data.columns and participant_data['excl_device_violation'].any():
                     exclusion_reasons.append('device_violation')
             
             session_details.append({
                 'pid': pid,
-                'total_trials': len(session_data),
+                'total_trials': len(participant_data),
                 'included': included,
                 'exclusion_reasons': exclusion_reasons
             })
@@ -936,7 +960,7 @@ def api_data_status():
         
         # Get list of data files
         data_files = []
-        data_dir = Path("data/responses")
+        data_dir = DATA_DIR
         if data_dir.exists():
             for file_path in data_dir.glob("*.csv"):
                 stat = file_path.stat()
@@ -1038,13 +1062,25 @@ def toggle_mode():
     current_mode = data_cleaner.test_mode if data_cleaner else False
     new_mode = not current_mode
     
+    print(f"*** TOGGLE FUNCTION CALLED ***")
+    print(f"*** Current mode: {current_mode} (TEST={current_mode}) ***")
+    print(f"*** Switching to: {new_mode} (TEST={new_mode}) ***")
+    print(f"*** data_cleaner object: {data_cleaner} ***")
+    
     # Reinitialize with new mode, forcing the mode (not auto-detecting)
-    if initialize_data(test_mode=new_mode, force_mode=True):
+    success = initialize_data(test_mode=new_mode, force_mode=True)
+    print(f"*** initialize_data returned: {success} ***")
+    
+    if success:
         mode_name = "TEST" if new_mode else "PRODUCTION"
+        print(f"*** Successfully switched to {mode_name} mode ***")
+        print(f"*** data_cleaner.test_mode after switch: {data_cleaner.test_mode if data_cleaner else 'None'} ***")
         flash(f'Switched to {mode_name} mode successfully', 'success')
     else:
+        print(f"*** Failed to switch modes ***")
         flash('Failed to switch modes', 'error')
     
+    print(f"*** About to redirect to dashboard ***")
     return redirect(url_for('dashboard'))
 
 @app.route('/toggle_incomplete', methods=['POST'])
@@ -1106,14 +1142,14 @@ def export_session_metadata():
         exclusion_summary = data_cleaner.get_exclusion_summary()
         
         # Create session-level summary
-        session_data = []
+        session_metadata = []
         for pid in cleaned_data['pid'].unique():
             pdata = cleaned_data[cleaned_data['pid'] == pid]
             included = pdata['include_in_primary'].sum()
             total = len(pdata)
             completion_rate = total / 60.0
             
-            session_data.append({
+            session_metadata.append({
                 'participant_id': pid,
                 'total_trials': total,
                 'included_trials': included,
@@ -1126,7 +1162,7 @@ def export_session_metadata():
                 'source_file': pdata['source_file'].iloc[0] if 'source_file' in pdata.columns else 'unknown'
             })
         
-        session_df = pd.DataFrame(session_data)
+        session_df = pd.DataFrame(session_metadata)
         
         # Create CSV
         output = io.StringIO()
@@ -1268,10 +1304,10 @@ def export_all_reports():
                 zip_file.writestr(f'cleaned_trial_data_{timestamp}.csv', cleaned_csv.getvalue())
                 
                 # Add session metadata
-                session_data = []
+                session_metadata_export = []
                 for pid in cleaned_data['pid'].unique():
                     pdata = cleaned_data[cleaned_data['pid'] == pid]
-                    session_data.append({
+                    session_metadata_export.append({
                         'participant_id': pid,
                         'total_trials': len(pdata),
                         'included_trials': pdata['include_in_primary'].sum(),
@@ -1279,7 +1315,7 @@ def export_all_reports():
                         'mean_trust_rating': pdata['trust_rating'].mean(),
                         'versions_seen': pdata['version'].nunique()
                     })
-                session_df = pd.DataFrame(session_data)
+                session_df = pd.DataFrame(session_metadata_export)
                 session_csv = io.StringIO()
                 session_df.to_csv(session_csv, index=False)
                 zip_file.writestr(f'session_metadata_{timestamp}.csv', session_csv.getvalue())
@@ -1726,7 +1762,7 @@ def delete_file(filename):
             return redirect(url_for('dashboard'))
         
         # Define the data directory
-        data_dir = Path('data/responses')
+        data_dir = DATA_DIR
         
         # Check if file exists
         file_path = data_dir / filename

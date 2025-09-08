@@ -8,9 +8,8 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 
 # Data directory configuration
-# This should point to the same directory that the study program uses
-# FIXED: Dashboard now reads from study program's data directory
-DATA_DIR = BASE_DIR.parent / "facial-trust-study" / "data" / "responses"
+# Dashboard reads from its own data directory which contains both test and production files
+DATA_DIR = BASE_DIR / "data" / "responses"
 
 # Study program data directory (for reference)
 STUDY_PROGRAM_DATA_DIR = BASE_DIR.parent / "facial-trust-study" / "data" / "responses"
