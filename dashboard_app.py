@@ -427,7 +427,9 @@ def dashboard():
                     
                     # Only show incomplete sessions and apply mode filtering
                     is_test_session = (
-                        'test' in participant_id.lower()
+                        'test' in participant_id.lower() or
+                        participant_id.startswith('P008') or
+                        participant_id.startswith('P0') and participant_id != '200'
                         # Note: Numeric IDs like "200" are REAL study data, not test data
                     )
                     
@@ -1040,6 +1042,47 @@ def toggle_mode():
         flash('Failed to switch modes', 'error')
     
     return redirect(url_for('dashboard'))
+
+@app.route('/cleanup_p008', methods=['GET', 'POST'])
+def cleanup_p008():
+    """Delete P008 files from dashboard data directories"""
+    
+    # Check dashboard's data directory
+    dashboard_data_dir = Path(DATA_DIR)
+    study_sessions_dir = Path("../facial-trust-study/data/sessions")
+    
+    deleted_files = []
+    found_files = []
+    
+    # Check dashboard data directory
+    if dashboard_data_dir.exists():
+        for csv_file in dashboard_data_dir.glob("*.csv"):
+            found_files.append(f"DASHBOARD CSV: {csv_file.name}")
+            if "P008" in csv_file.name or (csv_file.name.startswith("P0") and "200" not in csv_file.name):
+                try:
+                    csv_file.unlink()
+                    deleted_files.append(f"DASHBOARD CSV: {csv_file.name}")
+                except Exception as e:
+                    found_files.append(f"ERROR deleting {csv_file.name}: {e}")
+    
+    # Check study program sessions directory  
+    if study_sessions_dir.exists():
+        for session_file in study_sessions_dir.glob("*.json"):
+            found_files.append(f"STUDY SESSION: {session_file.name}")
+            if "P008" in session_file.name or (session_file.name.startswith("P0") and "200" not in session_file.name):
+                try:
+                    session_file.unlink()
+                    deleted_files.append(f"STUDY SESSION: {session_file.name}")
+                except Exception as e:
+                    found_files.append(f"ERROR deleting {session_file.name}: {e}")
+    
+    files_list = "<br>".join(found_files) if found_files else "No files found"
+    deleted_list = "<br>".join(deleted_files) if deleted_files else "No files deleted"
+    
+    return f"""<h1>P008 Cleanup</h1>
+    <p><strong>Found files:</strong><br>{files_list}</p>
+    <p><strong>DELETED:</strong><br>{deleted_list}</p>
+    <p><a href='/'>Back to Dashboard</a></p>"""
 
 @app.route('/toggle_incomplete', methods=['POST'])
 # @login_required  # Temporarily disabled for Render deployment
