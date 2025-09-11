@@ -1,13 +1,14 @@
 # RENDER_CLEAN_BUILD_v2_NO_PANDAS - July 20, 2025
 # Core web framework
 Flask==2.3.3
+scipy>=1.10.0
 Flask-Login==0.6.2
 Flask-WTF==1.1.1
 Werkzeug==2.3.7
 
 # Data processing and visualization
 pandas>=2.0.0,<3.0.0
-scipy>=1.10.0,<2.0.0
+scipy>=1.10.0
 plotly==5.18.0
 dash==2.14.1
 dash-bootstrap-components==1.5.0

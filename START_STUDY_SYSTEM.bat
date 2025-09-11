@@ -9,7 +9,7 @@ echo.
 echo Starting both programs...
 echo.
 
-echo [1/2] Starting Dashboard on port 5000...
+echo [1/2] Starting Dashboard on port 8080...
 start "Dashboard" cmd /k "cd /d C:\Users\Chris\CascadeProjects\face-viewer-dashboard && python dashboard_app.py"
 
 echo Waiting for dashboard to start...
@@ -26,12 +26,12 @@ echo ========================================
 echo    BOTH PROGRAMS ARE STARTING
 echo ========================================
 echo.
-echo Dashboard: http://localhost:5000
+echo Dashboard: http://localhost:8080
 echo Study Program: http://localhost:8080
 echo.
 
 echo Opening dashboard in browser...
-start http://localhost:5000
+start http://localhost:8080
 
 echo Opening study program in browser...
 start http://localhost:8080

@@ -418,6 +418,7 @@ def dashboard():
             session_files = list(sessions_dir.glob("*_session.json"))
             for session_file in session_files:
                 try:
+                    
                     with open(session_file, 'r') as f:
                         session_info = json.load(f)
                     
@@ -1828,4 +1829,4 @@ if __name__ == '__main__':
     else:
         print("Warning: Data initialization failed")
     
-    app.run(host='127.0.0.1', port=5000, debug=False)
+    app.run(host='127.0.0.1', port=8080, debug=False)
